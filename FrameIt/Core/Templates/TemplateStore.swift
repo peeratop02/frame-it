@@ -10,6 +10,8 @@ protocol TemplateStore {
     func all() throws -> [SavedTemplate]
     /// Persist a new template; it's appended to the end of the order.
     func save(name: String, style: FrameStyle, thumbnail: UIImage?) throws
+    /// Overwrite an existing template's name, style, and thumbnail (keeps its order/date).
+    func update(id: UUID, name: String, style: FrameStyle, thumbnail: UIImage?) throws
     func rename(id: UUID, to name: String) throws
     func delete(id: UUID) throws
     /// Rewrite `sortIndex` to match the given id order.

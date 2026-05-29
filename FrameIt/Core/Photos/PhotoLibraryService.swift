@@ -8,6 +8,12 @@ protocol PhotoLibraryService: Sendable {
     func authorizationStatus() -> PHAuthorizationStatus
     func requestAuthorization() async -> PHAuthorizationStatus
     func fetchAssets() async -> [PhotoAsset]
+    /// User albums plus common smart albums (Favorites, Recents, …), empties excluded.
+    func fetchAlbums() async -> [PhotoAlbum]
+    /// Image assets inside one collection, newest first.
+    func fetchAssets(inAlbum albumID: String) async -> [PhotoAsset]
+    /// Resolve a single asset by its `localIdentifier`, e.g. from a photo picker.
+    func asset(withID id: String) async -> PhotoAsset?
     func loadThumbnail(for asset: PhotoAsset, targetSize: CGSize) async -> UIImage?
     func loadFullImageData(for asset: PhotoAsset) async -> Data?
     /// Resolves the original filename (e.g. `IMG_1234.HEIC`) for one asset on demand.
@@ -41,26 +47,90 @@ actor PhotoKitLibraryService: PhotoLibraryService {
         options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
         let fetchResult = PHAsset.fetchAssets(with: .image, options: options)
 
-        var assets: [PhotoAsset] = []
-        var cache: [String: PHAsset] = [:]
-        assets.reserveCapacity(fetchResult.count)
-        cache.reserveCapacity(fetchResult.count)
-        // Cheap property reads only — no `PHAssetResource` lookups here. The original
-        // filename is resolved lazily by `loadFilename` when a photo opens in the editor.
-        fetchResult.enumerateObjects { asset, _, _ in
-            cache[asset.localIdentifier] = asset
-            assets.append(
-                PhotoAsset(
-                    id: asset.localIdentifier,
-                    pixelWidth: asset.pixelWidth,
-                    pixelHeight: asset.pixelHeight,
-                    creationDate: asset.creationDate,
-                    filename: nil
-                )
-            )
+        return mapAndCache(fetchResult, resetCache: true)
+    }
+
+    func fetchAlbums() async -> [PhotoAlbum] {
+        var albums: [PhotoAlbum] = []
+
+        // Common smart albums, in a sensible order; PhotoKit returns one collection each.
+        let smartSubtypes: [PHAssetCollectionSubtype] = [
+            .smartAlbumFavorites, .smartAlbumRecentlyAdded, .smartAlbumUserLibrary,
+            .smartAlbumSelfPortraits, .smartAlbumScreenshots, .smartAlbumPanoramas,
+            .smartAlbumLivePhotos, .smartAlbumBursts
+        ]
+        for subtype in smartSubtypes {
+            let collections = PHAssetCollection.fetchAssetCollections(
+                with: .smartAlbum, subtype: subtype, options: nil)
+            collections.enumerateObjects { collection, _, _ in
+                if let album = self.makeAlbum(from: collection) { albums.append(album) }
+            }
         }
-        assetCache = cache
+
+        // User-created albums, alphabetical.
+        let userOptions = PHFetchOptions()
+        userOptions.sortDescriptors = [NSSortDescriptor(key: "localizedTitle", ascending: true)]
+        let userAlbums = PHAssetCollection.fetchAssetCollections(
+            with: .album, subtype: .any, options: userOptions)
+        userAlbums.enumerateObjects { collection, _, _ in
+            if let album = self.makeAlbum(from: collection) { albums.append(album) }
+        }
+
+        return albums
+    }
+
+    func fetchAssets(inAlbum albumID: String) async -> [PhotoAsset] {
+        guard let collection = PHAssetCollection.fetchAssetCollections(
+            withLocalIdentifiers: [albumID], options: nil).firstObject else { return [] }
+        let options = PHFetchOptions()
+        options.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+        options.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        let result = PHAsset.fetchAssets(in: collection, options: options)
+        return mapAndCache(result, resetCache: false)
+    }
+
+    func asset(withID id: String) async -> PhotoAsset? {
+        guard let phAsset = phAsset(forID: id) else { return nil }
+        return Self.makeAsset(phAsset)
+    }
+
+    /// Map a fetch result to `PhotoAsset`s while caching the `PHAsset`s for later image
+    /// requests. Cheap property reads only — no `PHAssetResource` lookups (filename stays
+    /// lazy via `loadFilename`). `resetCache` replaces the cache (full library) vs merges
+    /// (album subsets, so library thumbnails stay cached).
+    private func mapAndCache(_ result: PHFetchResult<PHAsset>, resetCache: Bool) -> [PhotoAsset] {
+        var assets: [PhotoAsset] = []
+        assets.reserveCapacity(result.count)
+        if resetCache { assetCache.removeAll(keepingCapacity: true) }
+        result.enumerateObjects { asset, _, _ in
+            self.assetCache[asset.localIdentifier] = asset
+            assets.append(Self.makeAsset(asset))
+        }
         return assets
+    }
+
+    private static func makeAsset(_ asset: PHAsset) -> PhotoAsset {
+        PhotoAsset(
+            id: asset.localIdentifier,
+            pixelWidth: asset.pixelWidth,
+            pixelHeight: asset.pixelHeight,
+            creationDate: asset.creationDate,
+            filename: nil
+        )
+    }
+
+    private func makeAlbum(from collection: PHAssetCollection) -> PhotoAlbum? {
+        let imageOptions = PHFetchOptions()
+        imageOptions.predicate = NSPredicate(format: "mediaType == %d", PHAssetMediaType.image.rawValue)
+        imageOptions.sortDescriptors = [NSSortDescriptor(key: "creationDate", ascending: false)]
+        let assets = PHAsset.fetchAssets(in: collection, options: imageOptions)
+        guard assets.count > 0 else { return nil }   // skip empty albums
+        return PhotoAlbum(
+            id: collection.localIdentifier,
+            title: collection.localizedTitle ?? "Album",
+            count: assets.count,
+            coverAssetID: assets.firstObject?.localIdentifier
+        )
     }
 
     func loadThumbnail(for asset: PhotoAsset, targetSize: CGSize) async -> UIImage? {
@@ -110,11 +180,13 @@ actor PhotoKitLibraryService: PhotoLibraryService {
         return PHAssetResource.assetResources(for: phAsset).first?.originalFilename
     }
 
+    private func phAsset(for asset: PhotoAsset) -> PHAsset? { phAsset(forID: asset.id) }
+
     /// Cached lookup, falling back to a single-identifier fetch on a cache miss.
-    private func phAsset(for asset: PhotoAsset) -> PHAsset? {
-        if let cached = assetCache[asset.id] { return cached }
-        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [asset.id], options: nil).firstObject
-        if let fetched { assetCache[asset.id] = fetched }
+    private func phAsset(forID id: String) -> PHAsset? {
+        if let cached = assetCache[id] { return cached }
+        let fetched = PHAsset.fetchAssets(withLocalIdentifiers: [id], options: nil).firstObject
+        if let fetched { assetCache[id] = fetched }
         return fetched
     }
 }

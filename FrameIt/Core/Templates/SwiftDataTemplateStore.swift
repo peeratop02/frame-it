@@ -26,6 +26,14 @@ final class SwiftDataTemplateStore: TemplateStore {
         try context.save()
     }
 
+    func update(id: UUID, name: String, style: FrameStyle, thumbnail: UIImage?) throws {
+        guard let model = try model(for: id) else { return }
+        model.name = name
+        model.style = style
+        model.thumbnail = thumbnail?.pngData()
+        try context.save()
+    }
+
     func rename(id: UUID, to name: String) throws {
         guard let model = try model(for: id) else { return }
         model.name = name

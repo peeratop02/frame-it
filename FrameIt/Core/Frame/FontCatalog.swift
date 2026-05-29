@@ -66,6 +66,10 @@ enum FontCatalog {
     static let all: [FrameFont] = [
         // Sans
         FrameFont(id: "system", displayName: "System", category: .sans, isPremium: false, familyName: nil),
+        // Bundled Google Fonts (OFL) — registered at launch by `FontRegistrar`.
+        FrameFont(id: "poppins", displayName: "Poppins", category: .sans, isPremium: true, familyName: "Poppins"),
+        FrameFont(id: "montserrat", displayName: "Montserrat", category: .sans, isPremium: true, familyName: "Montserrat"),
+        FrameFont(id: "oswald", displayName: "Oswald", category: .sans, isPremium: true, familyName: "Oswald"),
         FrameFont(id: "avenir-next", displayName: "Avenir Next", category: .sans, isPremium: true, familyName: "Avenir Next"),
         FrameFont(id: "helvetica-neue", displayName: "Helvetica Neue", category: .sans, isPremium: true, familyName: "Helvetica Neue"),
         FrameFont(id: "gill-sans", displayName: "Gill Sans", category: .sans, isPremium: true, familyName: "Gill Sans"),
@@ -74,6 +78,8 @@ enum FontCatalog {
 
         // Serif
         FrameFont(id: "serif", displayName: "New York", category: .serif, isPremium: false, familyName: nil),
+        FrameFont(id: "lora", displayName: "Lora", category: .serif, isPremium: true, familyName: "Lora"),
+        FrameFont(id: "playfair-display", displayName: "Playfair Display", category: .serif, isPremium: true, familyName: "Playfair Display"),
         FrameFont(id: "georgia", displayName: "Georgia", category: .serif, isPremium: true, familyName: "Georgia"),
         FrameFont(id: "palatino", displayName: "Palatino", category: .serif, isPremium: true, familyName: "Palatino"),
         FrameFont(id: "baskerville", displayName: "Baskerville", category: .serif, isPremium: true, familyName: "Baskerville"),
@@ -81,10 +87,13 @@ enum FontCatalog {
 
         // Rounded
         FrameFont(id: "rounded", displayName: "SF Rounded", category: .rounded, isPremium: false, familyName: nil),
+        FrameFont(id: "quicksand", displayName: "Quicksand", category: .rounded, isPremium: true, familyName: "Quicksand"),
+        FrameFont(id: "comfortaa", displayName: "Comfortaa", category: .rounded, isPremium: true, familyName: "Comfortaa"),
         FrameFont(id: "arial-rounded", displayName: "Arial Rounded", category: .rounded, isPremium: true, familyName: "Arial Rounded MT Bold"),
 
         // Mono
         FrameFont(id: "monospaced", displayName: "SF Mono", category: .mono, isPremium: false, familyName: nil),
+        FrameFont(id: "space-mono", displayName: "Space Mono", category: .mono, isPremium: true, familyName: "Space Mono"),
         FrameFont(id: "menlo", displayName: "Menlo", category: .mono, isPremium: true, familyName: "Menlo"),
         FrameFont(id: "courier", displayName: "Courier", category: .mono, isPremium: true, familyName: "Courier"),
         FrameFont(id: "american-typewriter", displayName: "American Typewriter", category: .mono, isPremium: true, familyName: "American Typewriter"),

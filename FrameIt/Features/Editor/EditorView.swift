@@ -28,8 +28,8 @@ struct EditorView: View {
     @State private var showSaveTemplate = false
     @State private var templateName = ""
 
-    init(asset: PhotoAsset) {
-        _viewModel = State(initialValue: EditorViewModel(asset: asset))
+    init(asset: PhotoAsset, editingTemplate: SavedTemplate? = nil) {
+        _viewModel = State(initialValue: EditorViewModel(asset: asset, editingTemplate: editingTemplate))
     }
 
     var body: some View {
@@ -143,17 +143,31 @@ struct EditorView: View {
     /// existing one to this photo.
     @ViewBuilder
     private var templateMenu: some View {
-        Button {
-            templateName = viewModel.suggestedTemplateName
-            showSaveTemplate = true
-        } label: {
-            Label("Save as Template…", systemImage: "square.stack.badge.plus")
+        if let applied = viewModel.appliedTemplate {
+            Button {
+                viewModel.updateAppliedTemplate()
+            } label: {
+                Label("Update “\(applied.name)”", systemImage: "square.stack.badge.plus")
+            }
+            Button {
+                templateName = viewModel.suggestedTemplateName
+                showSaveTemplate = true
+            } label: {
+                Label("Save as New Template…", systemImage: "plus.square.on.square")
+            }
+        } else {
+            Button {
+                templateName = viewModel.suggestedTemplateName
+                showSaveTemplate = true
+            } label: {
+                Label("Save as Template…", systemImage: "square.stack.badge.plus")
+            }
         }
 
         if !viewModel.savedTemplates.isEmpty {
             Menu {
                 ForEach(viewModel.savedTemplates) { template in
-                    Button(template.name) { viewModel.apply(template.style) }
+                    Button(template.name) { viewModel.apply(template) }
                 }
             } label: {
                 Label("Apply Template", systemImage: "square.stack")

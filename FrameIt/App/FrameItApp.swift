@@ -3,6 +3,11 @@ import SwiftData
 
 @main
 struct FrameItApp: App {
+    init() {
+        // Register bundled custom fonts so the editor's premium typefaces resolve.
+        FontRegistrar.registerBundledFonts()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

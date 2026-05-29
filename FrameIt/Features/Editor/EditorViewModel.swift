@@ -35,6 +35,9 @@ final class EditorViewModel {
 
     /// The style the editor opened with; used to detect unsaved edits on close.
     private var initialStyle: FrameStyle = .default
+    /// The template this session derives from (applied here or opened for editing), or nil.
+    /// When set, the editor offers "Update '<name>'" and Save targets that template.
+    private(set) var appliedTemplate: SavedTemplate?
     /// Whether the user has changed the frame since opening the editor.
     var hasUnsavedChanges: Bool { style != initialStyle }
     /// Filename shown in the editor header. Resolved lazily in `load()` (kept off the
@@ -56,6 +59,7 @@ final class EditorViewModel {
 
     init(
         asset: PhotoAsset,
+        editingTemplate: SavedTemplate? = nil,
         library: any PhotoLibraryService = PhotoKitLibraryService(),
         metadataService: any MetadataService = ImageIOMetadataService(),
         exporter: ExportService = ExportService()
@@ -65,12 +69,17 @@ final class EditorViewModel {
         self.metadataService = metadataService
         self.exporter = exporter
 
-        // Seed the opening typeface from the user's chosen default font (a paid
-        // setting). A view model isn't a View, so read UserDefaults directly. Unknown
-        // or missing ids leave the system default. Both the live and baseline styles
-        // get the seed so it doesn't count as an unsaved change.
-        if let storedFontID = UserDefaults.standard.string(forKey: FontCatalog.defaultSelectionKey),
-           FontCatalog.all.contains(where: { $0.id == storedFontID }) {
+        if let editingTemplate {
+            // Opened to edit an existing template: start from its style and target it on Save.
+            style = editingTemplate.style
+            initialStyle = editingTemplate.style
+            appliedTemplate = editingTemplate
+        } else if let storedFontID = UserDefaults.standard.string(forKey: FontCatalog.defaultSelectionKey),
+                  FontCatalog.all.contains(where: { $0.id == storedFontID }) {
+            // Seed the opening typeface from the user's chosen default font (a paid
+            // setting). A view model isn't a View, so read UserDefaults directly. Unknown
+            // or missing ids leave the system default. Both the live and baseline styles
+            // get the seed so it doesn't count as an unsaved change.
             style.fontID = storedFontID
             initialStyle.fontID = storedFontID
         }
@@ -139,10 +148,12 @@ final class EditorViewModel {
         savedTemplates = (try? templateStore?.all()) ?? []
     }
 
-    /// Apply a saved template's style to the current photo. Keeps the photo and its
-    /// metadata; counts as an unsaved change so the close prompt still appears.
-    func apply(_ templateStyle: FrameStyle) {
-        style = templateStyle
+    /// Apply a saved template to the current photo. Keeps the photo and its metadata;
+    /// counts as an unsaved change so the close prompt still appears. Remembers the source
+    /// template so Save can offer to update it instead of creating a duplicate.
+    func apply(_ template: SavedTemplate) {
+        style = template.style
+        appliedTemplate = template
         if style.placeStyle == .map { Task { await ensureMapSnapshot() } }
     }
 
@@ -150,17 +161,51 @@ final class EditorViewModel {
     var suggestedTemplateName: String { "Template \(savedTemplates.count + 1)" }
 
     /// Save the current style as a reusable template, rendering a small thumbnail.
+    /// If a template with the same name already exists, it is updated rather than
+    /// duplicated — so "apply → edit → save with the same name" overwrites the original.
     func saveAsTemplate(named name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalName = trimmed.isEmpty ? suggestedTemplateName : trimmed
         guard let store = templateStore else { return }
+        let thumbnail = templateThumbnail()
         do {
-            try store.save(name: finalName, style: style, thumbnail: templateThumbnail())
-            loadTemplates()
-            alert = EditorAlert(title: "Template Saved",
-                                message: "“\(finalName)” is in your Templates tab.")
+            if let existing = savedTemplates.first(where: {
+                $0.name.caseInsensitiveCompare(finalName) == .orderedSame
+            }) {
+                try store.update(id: existing.id, name: finalName, style: style, thumbnail: thumbnail)
+                appliedTemplate = existing
+                loadTemplates()
+                alert = EditorAlert(title: "Template Updated",
+                                    message: "“\(finalName)” was updated.")
+            } else {
+                try store.save(name: finalName, style: style, thumbnail: thumbnail)
+                loadTemplates()
+                appliedTemplate = savedTemplates.first {
+                    $0.name.caseInsensitiveCompare(finalName) == .orderedSame
+                }
+                alert = EditorAlert(title: "Template Saved",
+                                    message: "“\(finalName)” is in your Templates tab.")
+            }
         } catch {
             alert = EditorAlert(title: "Couldn't Save Template",
+                                message: error.localizedDescription)
+        }
+    }
+
+    /// Update the template this session derives from with the current style + a fresh
+    /// thumbnail. No-op if the editor isn't tied to a template.
+    func updateAppliedTemplate() {
+        guard let store = templateStore, let target = appliedTemplate else { return }
+        let thumbnail = templateThumbnail()
+        do {
+            try store.update(id: target.id, name: target.name, style: style, thumbnail: thumbnail)
+            loadTemplates()
+            // Refresh the cached snapshot so a subsequent update keeps targeting it.
+            appliedTemplate = savedTemplates.first { $0.id == target.id }
+            alert = EditorAlert(title: "Template Updated",
+                                message: "“\(target.name)” was updated.")
+        } catch {
+            alert = EditorAlert(title: "Couldn't Update Template",
                                 message: error.localizedDescription)
         }
     }

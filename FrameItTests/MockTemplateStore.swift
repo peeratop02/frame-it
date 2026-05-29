@@ -21,6 +21,14 @@ final class MockTemplateStore: TemplateStore {
                                    sortIndex: saved.count, style: style, thumbnail: thumbnail))
     }
 
+    func update(id: UUID, name: String, style: FrameStyle, thumbnail: UIImage?) throws {
+        if shouldThrow { throw StoreError() }
+        guard let index = saved.firstIndex(where: { $0.id == id }) else { return }
+        let old = saved[index]
+        saved[index] = SavedTemplate(id: old.id, name: name, createdAt: old.createdAt,
+                                     sortIndex: old.sortIndex, style: style, thumbnail: thumbnail)
+    }
+
     func rename(id: UUID, to name: String) throws {
         if shouldThrow { throw StoreError() }
         guard let index = saved.firstIndex(where: { $0.id == id }) else { return }
