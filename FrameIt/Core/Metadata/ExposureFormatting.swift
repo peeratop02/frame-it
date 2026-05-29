@@ -69,11 +69,40 @@ enum ExposureFormatting {
         }
     }
 
-    /// The capture app name from the EXIF Software tag, with any trailing version
-    /// dropped: "Photomator 3.4.14" → "Photomator", "No Fusion" → "No Fusion".
-    /// Returns `nil` when nothing readable remains (e.g. an OS version like "16.5"),
-    /// so Apple photos that store only a version string render no "Shot with" line.
-    static func captureApp(_ software: String) -> String? {
+    /// The capture app name, preferring a "Shot with …" credit found in the image
+    /// description/caption (where third-party camera apps like *No Fusion* stamp
+    /// themselves) and falling back to the EXIF Software tag with any trailing
+    /// version dropped. Returns `nil` when nothing readable remains — e.g. an OS
+    /// version like "16.5" — so Apple photos render no "Shot with" line.
+    ///
+    /// Examples: description `Shot with No Fusion by "K4".` → "No Fusion";
+    /// software "Photomator 3.4.14" → "Photomator"; software "18.1" → nil.
+    static func captureApp(software: String?, description: String? = nil) -> String? {
+        if let fromDescription = appFromDescription(description) { return fromDescription }
+        return appFromSoftware(software)
+    }
+
+    /// Extract the app from a "Shot with / shot on / taken with / captured with /
+    /// made with X [by …]" credit line, trimming the trailing author + punctuation.
+    private static func appFromDescription(_ description: String?) -> String? {
+        guard let raw = description?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !raw.isEmpty else { return nil }
+        let prefixes = ["shot with ", "shot on ", "taken with ", "captured with ",
+                        "made with ", "processed with ", "edited with "]
+        let lower = raw.lowercased()
+        guard let prefix = prefixes.first(where: { lower.hasPrefix($0) }) else { return nil }
+
+        var rest = String(raw.dropFirst(prefix.count))
+        if let byRange = rest.lowercased().range(of: " by ") {
+            rest = String(rest[..<byRange.lowerBound])
+        }
+        let trimmed = rest.trimmingCharacters(in: CharacterSet(charactersIn: " .,\"'“”‘’"))
+        return trimmed.isEmpty ? nil : trimmed
+    }
+
+    /// The EXIF Software tag with any trailing version dropped.
+    private static func appFromSoftware(_ software: String?) -> String? {
+        guard let software else { return nil }
         var tokens = software.split(separator: " ").map(String.init)
         // Strip trailing tokens that are purely a version (digits and dots).
         while let last = tokens.last,

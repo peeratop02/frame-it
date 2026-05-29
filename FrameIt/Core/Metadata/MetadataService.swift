@@ -29,6 +29,15 @@ struct ImageIOMetadataService: MetadataService {
                 .trimmingCharacters(in: .whitespacesAndNewlines), !software.isEmpty {
                 result.software = software
             }
+            result.captureDescription = Self.nonEmpty(tiff[kCGImagePropertyTIFFImageDescription])
+        }
+
+        // The capture-app credit ("Shot with …") often lives in the description/caption
+        // rather than the Software tag. Prefer TIFF ImageDescription, then IPTC caption,
+        // then EXIF UserComment.
+        if result.captureDescription == nil,
+           let iptc = props[kCGImagePropertyIPTCDictionary] as? [CFString: Any] {
+            result.captureDescription = Self.nonEmpty(iptc[kCGImagePropertyIPTCCaptionAbstract])
         }
 
         if let exif = props[kCGImagePropertyExifDictionary] as? [CFString: Any] {
@@ -42,6 +51,9 @@ struct ImageIOMetadataService: MetadataService {
             result.lensModel = exif[kCGImagePropertyExifLensModel] as? String
             if let original = exif[kCGImagePropertyExifDateTimeOriginal] as? String {
                 result.dateTaken = Self.exifDateFormatter.date(from: original)
+            }
+            if result.captureDescription == nil {
+                result.captureDescription = Self.nonEmpty(exif[kCGImagePropertyExifUserComment])
             }
         }
 
@@ -85,6 +97,13 @@ struct ImageIOMetadataService: MetadataService {
         updated.administrativeArea = placemark.administrativeArea
         updated.country = placemark.country
         return updated
+    }
+
+    /// A trimmed non-empty string from a CF property value, or `nil`.
+    private static func nonEmpty(_ value: Any?) -> String? {
+        guard let string = (value as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !string.isEmpty else { return nil }
+        return string
     }
 
     private static let exifDateFormatter: DateFormatter = {

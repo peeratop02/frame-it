@@ -20,8 +20,16 @@ struct PhotoMetadata: Equatable, Sendable {
     var administrativeArea: String?  // province/state, reverse-geocoded
     var country: String?             // reverse-geocoded
     var software: String?            // capture app / EXIF Software tag, e.g. "No Fusion"
+    var captureDescription: String?  // image description / caption, e.g. "Shot with No Fusion by \"K4\"."
 
     static let empty = PhotoMetadata()
+
+    /// The capture-app name to display, derived from the description/caption first
+    /// (third-party apps stamp a "Shot with …" credit there) then the Software tag.
+    /// `nil` when neither yields a real app (e.g. only an OS version is present).
+    var appName: String? {
+        ExposureFormatting.captureApp(software: software, description: captureDescription)
+    }
 
     var hasLocation: Bool {
         latitude != nil && longitude != nil

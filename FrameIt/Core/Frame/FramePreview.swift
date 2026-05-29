@@ -280,10 +280,10 @@ struct FramePreview: View {
         return parts
     }
 
-    /// "Shot with <app>" line from the EXIF Software tag, version stripped.
+    /// "Shot with <app>" line, derived from the photo's description/caption or the
+    /// EXIF Software tag (see `PhotoMetadata.appName`).
     private var appText: String? {
-        guard style.isFieldEnabled(.app), let software = metadata.software,
-              let app = ExposureFormatting.captureApp(software) else { return nil }
+        guard style.isFieldEnabled(.app), let app = metadata.appName else { return nil }
         return "Shot with \(app)"
     }
 }

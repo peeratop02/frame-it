@@ -141,7 +141,7 @@ struct MetadataControls: View {
         case .iso: return metadata.isoSpeed != nil
         case .focalLength: return metadata.focalLength != nil
         case .location: return metadata.placeName != nil || metadata.hasLocation
-        case .app: return metadata.software != nil
+        case .app: return metadata.appName != nil
         }
     }
 }

@@ -64,6 +64,22 @@ struct MetadataServiceTests {
         #expect(metadata.hasLocation)
     }
 
+    @Test func parsesAppCreditFromImageDescription() {
+        let properties: [CFString: Any] = [
+            kCGImagePropertyTIFFDictionary: [
+                kCGImagePropertyTIFFMake: "Apple",
+                kCGImagePropertyTIFFModel: "iPhone 16 Pro Max",
+                // Software is just the OS version on this shot.
+                kCGImagePropertyTIFFSoftware: "18.1",
+                kCGImagePropertyTIFFImageDescription: "Shot with No Fusion by \u{201C}K4\u{201D}.",
+            ],
+        ]
+        let metadata = ImageIOMetadataService().metadata(from: makeImageData(properties: properties))
+        #expect(metadata.captureDescription == "Shot with No Fusion by \u{201C}K4\u{201D}.")
+        // The displayed app comes from the description, not the OS version.
+        #expect(metadata.appName == "No Fusion")
+    }
+
     @Test func returnsEmptyForNonImageData() {
         let metadata = ImageIOMetadataService().metadata(from: Data([0x00, 0x01, 0x02]))
         #expect(metadata == .empty)

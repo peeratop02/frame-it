@@ -38,14 +38,29 @@ struct ExposureFormattingTests {
     }
 
     @Test func captureAppStripsTrailingVersion() {
-        #expect(ExposureFormatting.captureApp("Photomator 3.4.14") == "Photomator")
-        #expect(ExposureFormatting.captureApp("No Fusion") == "No Fusion")
-        #expect(ExposureFormatting.captureApp("Pixelmator Pro 3.6") == "Pixelmator Pro")
+        #expect(ExposureFormatting.captureApp(software: "Photomator 3.4.14") == "Photomator")
+        #expect(ExposureFormatting.captureApp(software: "No Fusion") == "No Fusion")
+        #expect(ExposureFormatting.captureApp(software: "Pixelmator Pro 3.6") == "Pixelmator Pro")
     }
 
     @Test func captureAppReturnsNilForVersionOnly() {
-        #expect(ExposureFormatting.captureApp("16.5") == nil)
-        #expect(ExposureFormatting.captureApp("  ") == nil)
+        #expect(ExposureFormatting.captureApp(software: "16.5") == nil)
+        #expect(ExposureFormatting.captureApp(software: "  ") == nil)
+        #expect(ExposureFormatting.captureApp(software: nil) == nil)
+    }
+
+    @Test func captureAppExtractsFromDescription() {
+        #expect(ExposureFormatting.captureApp(software: "18.1",
+                                              description: "Shot with No Fusion by \u{201C}K4\u{201D}.") == "No Fusion")
+        #expect(ExposureFormatting.captureApp(software: nil, description: "Shot on Halide") == "Halide")
+        #expect(ExposureFormatting.captureApp(software: nil, description: "Made with VSCO by jane.") == "VSCO")
+    }
+
+    @Test func captureAppPrefersDescriptionThenSoftware() {
+        // Description without a known "shot with" prefix is ignored; falls back to software.
+        #expect(ExposureFormatting.captureApp(software: "Halide 2.0", description: "A nice sunset") == "Halide")
+        // Description wins over software when it carries a credit.
+        #expect(ExposureFormatting.captureApp(software: "18.1", description: "Shot with Obscura") == "Obscura")
     }
 
     @Test func cameraNameByFocalLength() {
