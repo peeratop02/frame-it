@@ -37,8 +37,9 @@ final class EditorViewModel {
     private var initialStyle: FrameStyle = .default
     /// Whether the user has changed the frame since opening the editor.
     var hasUnsavedChanges: Bool { style != initialStyle }
-    /// Filename shown in the editor header.
-    var photoFilename: String? { asset.filename }
+    /// Filename shown in the editor header. Resolved lazily in `load()` (kept off the
+    /// Photos grid path, where per-asset filename lookups cost seconds).
+    private(set) var photoFilename: String?
 
     private(set) var isLoading = true
     private(set) var isExporting = false
@@ -86,6 +87,7 @@ final class EditorViewModel {
         }
         sourceImage = UIImage(data: data)
         metadata = metadataService.metadata(from: data)
+        photoFilename = await library.loadFilename(for: asset)
 
         // Reverse-geocode in the background; refresh the place name when ready.
         if metadata.hasLocation {

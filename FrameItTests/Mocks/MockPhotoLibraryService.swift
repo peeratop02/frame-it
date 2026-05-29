@@ -15,6 +15,9 @@ struct MockPhotoLibraryService: PhotoLibraryService {
     func fetchAssets() async -> [PhotoAsset] { assets }
     func loadThumbnail(for asset: PhotoAsset, targetSize: CGSize) async -> UIImage? { nil }
     func loadFullImageData(for asset: PhotoAsset) async -> Data? { fullData }
+    func loadFilename(for asset: PhotoAsset) async -> String? {
+        assets.first { $0.id == asset.id }?.filename
+    }
 }
 
 extension PhotoAsset {
