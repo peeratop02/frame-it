@@ -91,8 +91,13 @@ enum FontCatalog {
         FrameFont(id: "comfortaa", displayName: "Comfortaa", category: .rounded, isPremium: true, familyName: "Comfortaa"),
         FrameFont(id: "arial-rounded", displayName: "Arial Rounded", category: .rounded, isPremium: true, familyName: "Arial Rounded MT Bold"),
 
-        // Mono
+        // Mono — coding/terminal typefaces (OFL Google Fonts, bundled).
         FrameFont(id: "monospaced", displayName: "SF Mono", category: .mono, isPremium: false, familyName: nil),
+        FrameFont(id: "jetbrains-mono", displayName: "JetBrains Mono", category: .mono, isPremium: true, familyName: "JetBrains Mono"),
+        FrameFont(id: "fira-code", displayName: "Fira Code", category: .mono, isPremium: true, familyName: "Fira Code"),
+        FrameFont(id: "ibm-plex-mono", displayName: "IBM Plex Mono", category: .mono, isPremium: true, familyName: "IBM Plex Mono"),
+        FrameFont(id: "source-code-pro", displayName: "Source Code Pro", category: .mono, isPremium: true, familyName: "Source Code Pro"),
+        FrameFont(id: "red-hat-mono", displayName: "Red Hat Mono", category: .mono, isPremium: true, familyName: "Red Hat Mono"),
         FrameFont(id: "space-mono", displayName: "Space Mono", category: .mono, isPremium: true, familyName: "Space Mono"),
         FrameFont(id: "menlo", displayName: "Menlo", category: .mono, isPremium: true, familyName: "Menlo"),
         FrameFont(id: "courier", displayName: "Courier", category: .mono, isPremium: true, familyName: "Courier"),
