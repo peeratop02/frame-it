@@ -31,6 +31,13 @@ struct PhotoMetadata: Equatable, Sendable {
         ExposureFormatting.captureApp(software: software, description: captureDescription)
     }
 
+    /// The focal length to display, preferring the 35mm-equivalent (what Apple Photos
+    /// shows, e.g. 24mm) over the raw physical lens focal length (e.g. 6.86mm → 7mm).
+    var displayFocalLength: Double? {
+        if let equivalent = focalLengthIn35mm { return Double(equivalent) }
+        return focalLength
+    }
+
     var hasLocation: Bool {
         latitude != nil && longitude != nil
     }

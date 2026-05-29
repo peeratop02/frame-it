@@ -257,7 +257,7 @@ struct FramePreview: View {
     /// Camera-setting cluster: focal length · aperture · shutter · ISO.
     private var settingParts: [String] {
         var parts: [String] = []
-        if style.isFieldEnabled(.focalLength), let v = metadata.focalLength,
+        if style.isFieldEnabled(.focalLength), let v = metadata.displayFocalLength,
            let s = ExposureFormatting.focalLength(v) { parts.append(s) }
         if style.isFieldEnabled(.aperture), let v = metadata.fNumber,
            let s = ExposureFormatting.aperture(v) { parts.append(s) }

@@ -139,7 +139,7 @@ struct MetadataControls: View {
         case .shutter: return metadata.exposureTime != nil
         case .aperture: return metadata.fNumber != nil
         case .iso: return metadata.isoSpeed != nil
-        case .focalLength: return metadata.focalLength != nil
+        case .focalLength: return metadata.displayFocalLength != nil
         case .location: return metadata.placeName != nil || metadata.hasLocation
         case .app: return metadata.appName != nil
         }

@@ -75,6 +75,21 @@ struct PhotoMetadataTests {
         #expect(m.placeName == "Phra Khanong District, Thailand")
     }
 
+    @Test func displayFocalLengthPrefers35mmEquivalent() {
+        var m = PhotoMetadata()
+        m.focalLength = 6.86
+        m.focalLengthIn35mm = 24
+        // Apple shows the 35mm-equivalent (24mm), not the physical 6.86mm.
+        #expect(m.displayFocalLength == 24)
+    }
+
+    @Test func displayFocalLengthFallsBackToPhysical() {
+        var m = PhotoMetadata()
+        m.focalLength = 50
+        #expect(m.displayFocalLength == 50)
+        #expect(PhotoMetadata.empty.displayFocalLength == nil)
+    }
+
     @Test func isDistrictLikeDetectsAdministrativeDivisions() {
         #expect(PhotoMetadata.isDistrictLike("Phra Khanong District"))
         #expect(PhotoMetadata.isDistrictLike("Santa Clara County"))
