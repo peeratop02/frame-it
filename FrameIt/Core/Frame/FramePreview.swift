@@ -22,6 +22,21 @@ struct FramePreview: View {
     private var bodySize: CGFloat { width * 0.035 }
     private var captionSize: CGFloat { width * 0.028 }
 
+    /// Small, constant gap between the photo and the metadata block — independent of
+    /// the padding slider so the text always hugs the photo with minimal breathing room.
+    private var textTopGap: CGFloat { width * 0.04 }
+    /// Gap above the credit line. Floored to a small constant (so it never crowds the
+    /// caption) and grown by the Bottom-padding slider, which pushes the credit down.
+    private var captionToCreditGap: CGFloat { max(width * 0.04, bottomPad) }
+    /// Distance from the credit to the frame's bottom edge — clamped so the credit
+    /// always sticks near the bottom with a capped margin, never floating.
+    private var creditBottomMargin: CGFloat { min(max(pad, width * 0.025), width * 0.05) }
+    /// The frame's bottom margin: capped when the credit shows (it owns the bottom),
+    /// otherwise the regular padding plus the Bottom-padding slider.
+    private var bottomMargin: CGFloat {
+        style.signature.isHidden ? pad + bottomPad : creditBottomMargin
+    }
+
     /// Resolves the chosen typeface at a size scaled by `fontScale`, applying the
     /// bold/italic toggles. The single place text styling is composed.
     private func styledFont(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
@@ -37,8 +52,6 @@ struct FramePreview: View {
             case .advanced: advancedLayout
             }
         }
-        // Extra bottom-only margin on top of each layout's regular padding.
-        .padding(.bottom, bottomPad)
         .frame(width: width)
         .background(style.background.color)
     }
@@ -47,40 +60,44 @@ struct FramePreview: View {
 
     /// Photo on top, one centered metadata block below (the classic caption look).
     private var minimalLayout: some View {
-        VStack(spacing: pad * 0.8) {
-            photoView
-            captionBlock
-            signatureFooter
-        }
-        .padding(pad)
+        framedContent { captionBlock }
     }
 
     /// Photo on top, metadata split into Exposure | Device | Place columns.
     private var advancedLayout: some View {
-        VStack(spacing: pad * 0.8) {
-            photoView
-            advancedColumns
-            signatureFooter
-        }
-        .padding(pad)
+        framedContent { advancedColumns }
     }
 
-    /// The small credit line at the very bottom of the frame. Styled (frame font +
-    /// color) for subscribers, or a neutral system watermark otherwise. Hidden when
-    /// the user (paid) has turned it off.
-    @ViewBuilder private var signatureFooter: some View {
-        if !style.signature.isHidden {
-            let text = style.signature.displayText(default: FrameStyle.defaultCredit)
-            let font: Font = style.signature.matchesFrameStyle
-                ? styledFont(captionSize * 0.8)
-                : .system(size: captionSize * 0.8)
-            Text(text)
-                .font(font)
-                .foregroundStyle(style.textColor.color.opacity(0.4))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .padding(.top, pad * 0.3)
+    /// Shared frame skeleton: the photo, the metadata block hugging it, and the credit
+    /// pinned near the bottom. The padding slider controls the photo's border (top +
+    /// sides); the vertical text gaps are decoupled from it so the text stays tight.
+    private func framedContent<Metadata: View>(@ViewBuilder metadata: () -> Metadata) -> some View {
+        VStack(spacing: 0) {
+            photoView
+            metadata()
+                .padding(.top, textTopGap)
+            if !style.signature.isHidden {
+                signatureLine
+                    .padding(.top, captionToCreditGap)
+            }
         }
+        .padding(.horizontal, pad)
+        .padding(.top, pad)
+        .padding(.bottom, bottomMargin)
+    }
+
+    /// The small credit line at the bottom of the frame. Styled (frame font + color)
+    /// for subscribers, or a neutral system watermark otherwise.
+    private var signatureLine: some View {
+        let text = style.signature.displayText(default: FrameStyle.defaultCredit)
+        let font: Font = style.signature.matchesFrameStyle
+            ? styledFont(captionSize * 0.8)
+            : .system(size: captionSize * 0.8)
+        return Text(text)
+            .font(font)
+            .foregroundStyle(style.textColor.color.opacity(0.4))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
     }
 
     // MARK: Advanced columns
@@ -187,7 +204,7 @@ struct FramePreview: View {
     }
 
     private var captionBlock: some View {
-        VStack(spacing: pad * 0.25) {
+        VStack(spacing: width * 0.014) {
             if let title = titleText {
                 Text(title)
                     .font(styledFont(bodySize * 1.15, weight: .semibold))
