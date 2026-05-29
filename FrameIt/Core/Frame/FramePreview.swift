@@ -25,17 +25,15 @@ struct FramePreview: View {
     /// Small, constant gap between the photo and the metadata block — independent of
     /// the padding slider so the text always hugs the photo with minimal breathing room.
     private var textTopGap: CGFloat { width * 0.04 }
-    /// Gap above the credit line. Floored to a small constant (so it never crowds the
-    /// caption) and grown by the Bottom-padding slider, which pushes the credit down.
+    /// Gap below the metadata block, before the credit. Floored to a small constant (so
+    /// the credit never crowds the caption) and grown by the Bottom-padding slider. This
+    /// space is reserved whether or not the credit shows, so toggling the credit only
+    /// adds/removes the one line and never reflows the frame's margins.
     private var captionToCreditGap: CGFloat { max(width * 0.04, bottomPad) }
-    /// Distance from the credit to the frame's bottom edge — clamped so the credit
-    /// always sticks near the bottom with a capped margin, never floating.
+    /// Distance from the bottom-most element to the frame's bottom edge — clamped so the
+    /// content always sticks near the bottom with a capped margin, never floating. Used
+    /// for both layouts and regardless of credit visibility, for a consistent bottom.
     private var creditBottomMargin: CGFloat { min(max(pad, width * 0.025), width * 0.05) }
-    /// The frame's bottom margin: capped when the credit shows (it owns the bottom),
-    /// otherwise the regular padding plus the Bottom-padding slider.
-    private var bottomMargin: CGFloat {
-        style.signature.isHidden ? pad + bottomPad : creditBottomMargin
-    }
 
     /// Resolves the chosen typeface at a size scaled by `fontScale`, applying the
     /// bold/italic toggles. The single place text styling is composed.
@@ -76,14 +74,16 @@ struct FramePreview: View {
             photoView
             metadata()
                 .padding(.top, textTopGap)
+            // Reserve the gap in both states so toggling the credit only shows/hides the
+            // line — the bottom margin stays identical whether the credit is on or off.
+            Spacer(minLength: 0).frame(height: captionToCreditGap)
             if !style.signature.isHidden {
                 signatureLine
-                    .padding(.top, captionToCreditGap)
             }
         }
         .padding(.horizontal, pad)
         .padding(.top, pad)
-        .padding(.bottom, bottomMargin)
+        .padding(.bottom, creditBottomMargin)
     }
 
     /// The small credit line at the bottom of the frame. Styled (frame font + color)
