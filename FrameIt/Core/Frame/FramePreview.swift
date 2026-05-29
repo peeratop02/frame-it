@@ -50,6 +50,7 @@ struct FramePreview: View {
         VStack(spacing: pad * 0.8) {
             photoView
             captionBlock
+            signatureFooter
         }
         .padding(pad)
     }
@@ -59,8 +60,27 @@ struct FramePreview: View {
         VStack(spacing: pad * 0.8) {
             photoView
             advancedColumns
+            signatureFooter
         }
         .padding(pad)
+    }
+
+    /// The small credit line at the very bottom of the frame. Styled (frame font +
+    /// color) for subscribers, or a neutral system watermark otherwise. Hidden when
+    /// the user (paid) has turned it off.
+    @ViewBuilder private var signatureFooter: some View {
+        if !style.signature.isHidden {
+            let text = style.signature.displayText(default: FrameStyle.defaultCredit)
+            let font: Font = style.signature.matchesFrameStyle
+                ? styledFont(captionSize * 0.8)
+                : .system(size: captionSize * 0.8)
+            Text(text)
+                .font(font)
+                .foregroundStyle(style.textColor.color.opacity(0.4))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .padding(.top, pad * 0.3)
+        }
     }
 
     // MARK: Advanced columns

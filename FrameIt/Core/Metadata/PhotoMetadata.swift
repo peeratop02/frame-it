@@ -28,12 +28,30 @@ struct PhotoMetadata: Equatable, Sendable {
     }
 
     /// A concise "City, Country" place string composed from the geocoded
-    /// components, falling back to province when there is no city. `nil` until
-    /// reverse-geocoding has filled at least one component.
+    /// components. `nil` until reverse-geocoding has filled at least one component.
     var placeName: String? {
-        let primary = locality ?? administrativeArea
-        let parts = [primary, country].compactMap { $0 }.filter { !$0.isEmpty }
+        let parts = [cityOrRegion, country].compactMap { $0 }.filter { !$0.isEmpty }
         return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
+
+    /// The most appropriate place name above country level. Prefers the city
+    /// (`locality`), but when the city is actually a district/county (e.g. Apple
+    /// returns "Phra Khanong District" for a Bangkok pin) it falls back to the
+    /// province/state (`administrativeArea`) so the result reads "Bangkok, Thailand".
+    private var cityOrRegion: String? {
+        if let locality, !locality.isEmpty, !Self.isDistrictLike(locality) {
+            return locality
+        }
+        return administrativeArea ?? locality
+    }
+
+    /// Whether a place name reads as a sub-city administrative division rather than a
+    /// city. Heuristic over common English and Thai district markers.
+    static func isDistrictLike(_ name: String) -> Bool {
+        let markers = ["district", "county", "borough", "subdistrict", "ward",
+                       "amphoe", "khet", "tambon", "khwaeng"]
+        let lower = name.lowercased()
+        return markers.contains { lower.contains($0) }
     }
 
     /// A human-friendly device name that avoids redundant make/model repetition.

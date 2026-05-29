@@ -4,6 +4,8 @@ import SwiftUI
 /// upgrade / iCloud features are present but disabled so the intended shape is
 /// visible without pretending to do something they don't yet.
 struct SettingsView: View {
+    @AppStorage(AppearanceMode.storageKey) private var appearanceRaw = AppearanceMode.system.rawValue
+
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "—"
@@ -26,6 +28,11 @@ struct SettingsView: View {
                 }
 
                 Section {
+                    Picker("Appearance", selection: $appearanceRaw) {
+                        ForEach(AppearanceMode.allCases) { mode in
+                            Text(mode.displayName).tag(mode.rawValue)
+                        }
+                    }
                     Toggle("iCloud Sync", isOn: .constant(false))
                         .disabled(true)
                 } header: {

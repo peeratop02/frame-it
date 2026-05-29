@@ -11,6 +11,11 @@ struct RootView: View {
     }
 
     @State private var selection: Section = .photos
+    @AppStorage(AppearanceMode.storageKey) private var appearanceRaw = AppearanceMode.system.rawValue
+
+    private var appearance: AppearanceMode {
+        AppearanceMode(rawValue: appearanceRaw) ?? .system
+    }
 
     var body: some View {
         TabView(selection: $selection) {
@@ -21,6 +26,7 @@ struct RootView: View {
                 SettingsView()
             }
         }
+        .preferredColorScheme(appearance.colorScheme)
     }
 }
 

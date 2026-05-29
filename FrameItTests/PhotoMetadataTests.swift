@@ -50,4 +50,36 @@ struct PhotoMetadataTests {
         m.country = "United States"
         #expect(m.placeName == "California, United States")
     }
+
+    @Test func placeNamePrefersProvinceWhenCityIsDistrict() {
+        var m = PhotoMetadata()
+        m.locality = "Phra Khanong District"
+        m.administrativeArea = "Bangkok"
+        m.country = "Thailand"
+        #expect(m.placeName == "Bangkok, Thailand")
+    }
+
+    @Test func placeNameKeepsRealCityOverProvince() {
+        var m = PhotoMetadata()
+        m.locality = "San Francisco"
+        m.administrativeArea = "California"
+        m.country = "United States"
+        #expect(m.placeName == "San Francisco, United States")
+    }
+
+    @Test func placeNameUsesDistrictWhenNoProvince() {
+        var m = PhotoMetadata()
+        m.locality = "Phra Khanong District"
+        m.country = "Thailand"
+        // No province to fall back to — better the district than nothing.
+        #expect(m.placeName == "Phra Khanong District, Thailand")
+    }
+
+    @Test func isDistrictLikeDetectsAdministrativeDivisions() {
+        #expect(PhotoMetadata.isDistrictLike("Phra Khanong District"))
+        #expect(PhotoMetadata.isDistrictLike("Santa Clara County"))
+        #expect(PhotoMetadata.isDistrictLike("Khet Watthana"))
+        #expect(!PhotoMetadata.isDistrictLike("San Francisco"))
+        #expect(!PhotoMetadata.isDistrictLike("Bangkok"))
+    }
 }

@@ -24,6 +24,8 @@ struct FrameStyleTests {
         style.borderWidth = 3
         style.placeStyle = .map
         style.pinIcon = "heart"
+        style.signature = Signature(customText: "© 2024 PeeraStudio",
+                                    matchesFrameStyle: true, isHidden: true)
 
         let data = try JSONEncoder().encode(style)
         let decoded = try JSONDecoder().decode(FrameStyle.self, from: data)
@@ -34,6 +36,22 @@ struct FrameStyleTests {
         #expect(decoded.italic)
         #expect(decoded.placeStyle == .map)
         #expect(decoded.pinIcon == "heart")
+        #expect(decoded.signature == style.signature)
+    }
+
+    @Test func defaultStyleHasDefaultSignature() {
+        #expect(FrameStyle.default.signature == .default)
+        #expect(FrameStyle.default.signature.isHidden == false)
+        #expect(FrameStyle.defaultCredit == "Crafted with Frame It")
+    }
+
+    @Test func signatureDisplayTextFallsBackToDefault() {
+        #expect(Signature.default.displayText(default: "Crafted with Frame It")
+                == "Crafted with Frame It")
+        #expect(Signature(customText: "   ", matchesFrameStyle: false, isHidden: false)
+                .displayText(default: "Crafted with Frame It") == "Crafted with Frame It")
+        #expect(Signature(customText: "  © Peera  ", matchesFrameStyle: false, isHidden: false)
+                .displayText(default: "Crafted with Frame It") == "© Peera")
     }
 
     @Test func defaultStyleUsesMinimalLayout() {

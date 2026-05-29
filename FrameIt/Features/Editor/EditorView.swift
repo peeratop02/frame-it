@@ -7,12 +7,14 @@ struct EditorView: View {
         case background = "Frame"
         case text = "Text"
         case details = "Details"
+        case credit = "Credit"
         var id: String { rawValue }
         var systemImage: String {
             switch self {
             case .background: return "square.on.square"
             case .text: return "textformat"
             case .details: return "list.bullet"
+            case .credit: return "signature"
             }
         }
     }
@@ -171,6 +173,8 @@ struct EditorView: View {
             TypographyControls(style: style)
         case .details:
             MetadataControls(style: style, metadata: viewModel.metadata)
+        case .credit:
+            SignatureControls(style: style)
         }
     }
 }
