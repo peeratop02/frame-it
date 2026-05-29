@@ -60,6 +60,9 @@ enum FontCatalog {
     /// Default selection — the free system sans font.
     static let defaultID = "system"
 
+    /// `@AppStorage` / `UserDefaults` key for the user's chosen default font (paid).
+    static let defaultSelectionKey = "defaultFontID"
+
     static let all: [FrameFont] = [
         // Sans
         FrameFont(id: "system", displayName: "System", category: .sans, isPremium: false, familyName: nil),

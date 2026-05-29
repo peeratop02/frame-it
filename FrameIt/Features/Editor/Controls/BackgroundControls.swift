@@ -26,19 +26,34 @@ struct BackgroundControls: View {
                 }
             }
 
-            slider("Padding", value: $style.padding, range: 0...0.18)
-            slider("Bottom padding", value: $style.bottomPadding, range: 0...0.18)
-            slider("Corner radius", value: $style.cornerRadius, range: 0...30)
+            slider("Padding", value: $style.padding, range: 0...0.18, format: percent)
+            slider("Bottom padding", value: $style.bottomPadding, range: 0...0.18, format: percent)
+            slider("Corner radius", value: $style.cornerRadius, range: 0...30, format: points)
+            slider("Shadow", value: $style.shadowStrength, range: 0...1, format: percent)
 
             LabeledControl("Border") {
                 HStack(spacing: 12) {
                     Slider(value: $style.borderWidth, in: 0...8)
+                    valueLabel(points(style.borderWidth))
                     ColorPicker("", selection: colorBinding(\.borderColor), supportsOpacity: false)
                         .labelsHidden()
                         .disabled(style.borderWidth == 0)
                 }
             }
         }
+    }
+
+    // MARK: Value formatting
+
+    private func percent(_ value: Double) -> String { "\(Int((value * 100).rounded()))%" }
+    private func points(_ value: Double) -> String { "\(Int(value.rounded()))" }
+
+    /// A trailing, monospaced slider value readout (matches the Text panel's Size row).
+    private func valueLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.subheadline.monospacedDigit())
+            .foregroundStyle(.secondary)
+            .frame(width: 44, alignment: .trailing)
     }
 
     private func swatch(_ color: RGBAColor, action: @escaping () -> Void) -> some View {
@@ -51,8 +66,14 @@ struct BackgroundControls: View {
         .accessibilityLabel("Background color")
     }
 
-    private func slider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
-        LabeledControl(title) { Slider(value: value, in: range) }
+    private func slider(_ title: String, value: Binding<Double>, range: ClosedRange<Double>,
+                        format: @escaping (Double) -> String) -> some View {
+        LabeledControl(title) {
+            HStack(spacing: 12) {
+                Slider(value: value, in: range)
+                valueLabel(format(value.wrappedValue))
+            }
+        }
     }
 
     private func colorBinding(_ keyPath: WritableKeyPath<FrameStyle, RGBAColor>) -> Binding<Color> {

@@ -201,6 +201,12 @@ struct FramePreview: View {
                 RoundedRectangle(cornerRadius: style.cornerRadius * scale, style: .continuous)
                     .strokeBorder(style.borderColor.color, lineWidth: style.borderWidth * scale)
             )
+            // Soft shadow so the photo lifts off the frame. Large radius + low opacity +
+            // small offset = soft. A no-op at strength 0; scaled by `scale` so the
+            // exported image matches the on-screen preview.
+            .shadow(color: .black.opacity(style.shadowStrength * 0.35),
+                    radius: style.shadowStrength * 22 * scale,
+                    x: 0, y: style.shadowStrength * 6 * scale)
     }
 
     private var captionBlock: some View {

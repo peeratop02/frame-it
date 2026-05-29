@@ -22,6 +22,7 @@ struct FrameStyleTests {
         style.bottomPadding = 0.1
         style.enabledFields = [.device, .location, .app]
         style.borderWidth = 3
+        style.shadowStrength = 0.6
         style.placeStyle = .map
         style.pinIcon = "heart"
         style.signature = Signature(customText: "© 2024 PeeraStudio",
@@ -37,6 +38,11 @@ struct FrameStyleTests {
         #expect(decoded.placeStyle == .map)
         #expect(decoded.pinIcon == "heart")
         #expect(decoded.signature == style.signature)
+        #expect(decoded.shadowStrength == 0.6)
+    }
+
+    @Test func defaultStyleHasNoShadow() {
+        #expect(FrameStyle.default.shadowStrength == 0)
     }
 
     @Test func defaultStyleHasDefaultSignature() {

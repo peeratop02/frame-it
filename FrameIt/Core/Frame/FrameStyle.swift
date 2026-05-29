@@ -137,6 +137,8 @@ struct FrameStyle: Codable, Equatable, Sendable {
     var cornerRadius: Double
     var borderWidth: Double
     var borderColor: RGBAColor
+    /// Soft shadow cast by the photo onto the frame, 0 (none) … 1 (strongest).
+    var shadowStrength: Double
     /// The selected typeface, persisted by `FontCatalog` id.
     var fontID: String
     /// Multiplier applied to all caption text sizes (0.7…1.4, default 1.0).
@@ -163,6 +165,7 @@ struct FrameStyle: Codable, Equatable, Sendable {
         cornerRadius: 0,
         borderWidth: 0,
         borderColor: .black,
+        shadowStrength: 0,
         fontID: FontCatalog.defaultID,
         fontScale: 1.0,
         bold: false,

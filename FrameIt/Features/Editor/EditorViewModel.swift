@@ -56,6 +56,16 @@ final class EditorViewModel {
         self.library = library
         self.metadataService = metadataService
         self.exporter = exporter
+
+        // Seed the opening typeface from the user's chosen default font (a paid
+        // setting). A view model isn't a View, so read UserDefaults directly. Unknown
+        // or missing ids leave the system default. Both the live and baseline styles
+        // get the seed so it doesn't count as an unsaved change.
+        if let storedFontID = UserDefaults.standard.string(forKey: FontCatalog.defaultSelectionKey),
+           FontCatalog.all.contains(where: { $0.id == storedFontID }) {
+            style.fontID = storedFontID
+            initialStyle.fontID = storedFontID
+        }
     }
 
     func load() async {
