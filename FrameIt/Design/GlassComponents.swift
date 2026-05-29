@@ -70,3 +70,25 @@ extension GlassIconButton where Label == Image {
         }
     }
 }
+
+/// A circular glass button that presents a `Menu` instead of firing an action —
+/// matches `GlassIconButton`'s look so it reads as a peer in a button cluster.
+struct GlassMenuButton<Content: View>: View {
+    var systemImage: String
+    var accessibilityLabel: String
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        Menu {
+            content
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .semibold))
+                .frame(width: 44, height: 44)
+                .contentShape(.circle)
+                .glassEffect(.regular.interactive(), in: .circle)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+}

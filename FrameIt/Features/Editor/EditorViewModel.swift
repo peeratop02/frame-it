@@ -26,6 +26,13 @@ final class EditorViewModel {
     private(set) var mapSnapshot: UIImage?
     var style: FrameStyle = .default
 
+    /// Saved templates available to apply to the current photo. Loaded once the
+    /// store is attached (see `attach(store:)`).
+    private(set) var savedTemplates: [SavedTemplate] = []
+    /// On-device template persistence, injected by the view once the SwiftData
+    /// `ModelContext` from the environment is available.
+    var templateStore: (any TemplateStore)?
+
     /// The style the editor opened with; used to detect unsaved edits on close.
     private var initialStyle: FrameStyle = .default
     /// Whether the user has changed the frame since opening the editor.
@@ -115,6 +122,60 @@ final class EditorViewModel {
     func share() {
         guard let rendered = renderCurrent() else { return }
         shareItem = ShareImage(image: rendered)
+    }
+
+    // MARK: - Templates
+
+    /// Attach the persistence store and load saved templates. Called by the view
+    /// once the SwiftData `ModelContext` from the environment is available.
+    func attach(store: any TemplateStore) {
+        templateStore = store
+        loadTemplates()
+    }
+
+    func loadTemplates() {
+        savedTemplates = (try? templateStore?.all()) ?? []
+    }
+
+    /// Apply a saved template's style to the current photo. Keeps the photo and its
+    /// metadata; counts as an unsaved change so the close prompt still appears.
+    func apply(_ templateStyle: FrameStyle) {
+        style = templateStyle
+        if style.placeStyle == .map { Task { await ensureMapSnapshot() } }
+    }
+
+    /// A reasonable default name for a new template ("Template 1", "Template 2", …).
+    var suggestedTemplateName: String { "Template \(savedTemplates.count + 1)" }
+
+    /// Save the current style as a reusable template, rendering a small thumbnail.
+    func saveAsTemplate(named name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let finalName = trimmed.isEmpty ? suggestedTemplateName : trimmed
+        guard let store = templateStore else { return }
+        do {
+            try store.save(name: finalName, style: style, thumbnail: templateThumbnail())
+            loadTemplates()
+            alert = EditorAlert(title: "Template Saved",
+                                message: "“\(finalName)” is in your Templates tab.")
+        } catch {
+            alert = EditorAlert(title: "Couldn't Save Template",
+                                message: error.localizedDescription)
+        }
+    }
+
+    /// A downscaled (~300pt) framed preview for the template grid.
+    private func templateThumbnail() -> UIImage? {
+        guard let source = sourceImage,
+              let full = renderer.render(photo: source, style: style, metadata: metadata,
+                                         mapSnapshot: mapSnapshot) else { return nil }
+        let maxSide: CGFloat = 300
+        let scale = min(maxSide / max(full.size.width, full.size.height), 1)
+        let target = CGSize(width: full.size.width * scale, height: full.size.height * scale)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: target, format: format).image { _ in
+            full.draw(in: CGRect(origin: .zero, size: target))
+        }
     }
 
     private func renderCurrent() -> UIImage? {

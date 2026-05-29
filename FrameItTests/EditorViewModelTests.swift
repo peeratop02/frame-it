@@ -41,4 +41,34 @@ struct EditorViewModelTests {
             #expect(vm.style.fontID == FontCatalog.defaultID)
         }
     }
+
+    @Test func applyReplacesStyleAndMarksUnsaved() {
+        let vm = EditorViewModel(asset: .sample())
+        var template = FrameStyle.default
+        template.layout = .advanced
+        template.shadowStrength = 0.5
+        vm.apply(template)
+        #expect(vm.style == template)
+        #expect(vm.hasUnsavedChanges)
+    }
+
+    @Test func saveAsTemplatePersistsCurrentStyle() {
+        let vm = EditorViewModel(asset: .sample())
+        let store = MockTemplateStore()
+        vm.attach(store: store)
+        vm.style.shadowStrength = 0.7
+
+        vm.saveAsTemplate(named: "My Style")
+        #expect(store.saved.count == 1)
+        #expect(store.saved[0].name == "My Style")
+        #expect(store.saved[0].style.shadowStrength == 0.7)
+    }
+
+    @Test func saveAsTemplateFallsBackToSuggestedName() {
+        let vm = EditorViewModel(asset: .sample())
+        let store = MockTemplateStore()
+        vm.attach(store: store)
+        vm.saveAsTemplate(named: "   ")
+        #expect(store.saved.first?.name == "Template 1")
+    }
 }

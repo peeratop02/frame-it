@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 /// Full-screen editor: live preview in the center, a Liquid Glass control dock
 /// pinned to the bottom (thumb zone), and a close/share header on top.
@@ -20,9 +21,12 @@ struct EditorView: View {
     }
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @State private var viewModel: EditorViewModel
     @State private var panel: Panel = .background
     @State private var showDiscardConfirm = false
+    @State private var showSaveTemplate = false
+    @State private var templateName = ""
 
     init(asset: PhotoAsset) {
         _viewModel = State(initialValue: EditorViewModel(asset: asset))
@@ -40,7 +44,10 @@ struct EditorView: View {
                 controlDock(viewModel: viewModel)
             }
         }
-        .task { await viewModel.load() }
+        .task {
+            viewModel.attach(store: SwiftDataTemplateStore(context: modelContext))
+            await viewModel.load()
+        }
         .onChange(of: viewModel.style.placeStyle) { _, mode in
             if mode == .map { Task { await viewModel.ensureMapSnapshot() } }
         }
@@ -59,6 +66,13 @@ struct EditorView: View {
             Button("Keep Editing", role: .cancel) {}
         } message: {
             Text("Your edits to this frame haven't been saved.")
+        }
+        .alert("Save as Template", isPresented: $showSaveTemplate) {
+            TextField("Name", text: $templateName)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") { viewModel.saveAsTemplate(named: templateName) }
+        } message: {
+            Text("Reuse this frame's style on other photos.")
         }
     }
 
@@ -95,10 +109,15 @@ struct EditorView: View {
         .padding(.top, 8)
     }
 
-    /// Share + Save, paired as a single glass cluster in the top-right.
+    /// Template menu, Share, and Save, paired as a single glass cluster in the top-right.
     private var actionButtons: some View {
         GlassEffectContainer(spacing: 10) {
             HStack(spacing: 10) {
+                GlassMenuButton(systemImage: "ellipsis", accessibilityLabel: "More") {
+                    templateMenu
+                }
+                .disabled(viewModel.sourceImage == nil)
+
                 GlassIconButton(systemImage: "square.and.arrow.up",
                                 accessibilityLabel: "Share") {
                     viewModel.share()
@@ -116,6 +135,28 @@ struct EditorView: View {
                     }
                 }
                 .disabled(viewModel.sourceImage == nil || viewModel.isExporting)
+            }
+        }
+    }
+
+    /// Contents of the ⋯ menu: save the current style as a template, and apply an
+    /// existing one to this photo.
+    @ViewBuilder
+    private var templateMenu: some View {
+        Button {
+            templateName = viewModel.suggestedTemplateName
+            showSaveTemplate = true
+        } label: {
+            Label("Save as Template…", systemImage: "square.stack.badge.plus")
+        }
+
+        if !viewModel.savedTemplates.isEmpty {
+            Menu {
+                ForEach(viewModel.savedTemplates) { template in
+                    Button(template.name) { viewModel.apply(template.style) }
+                }
+            } label: {
+                Label("Apply Template", systemImage: "square.stack")
             }
         }
     }
