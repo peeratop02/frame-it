@@ -6,7 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Frame It** — an iOS (26+) app that wraps a chosen photo in a customizable frame
 displaying its capture metadata (device, date, shutter, ISO, focal length, lens, location).
-Built with SwiftUI. iPad support and a 3-tier monetization model are planned for later phases.
+Built with SwiftUI. The **3-tier monetization model is built** (Free / Pro one-time /
+Studio subscription — entitlement gating, paywall, upsell, StoreKit 2 config, plus a
+DEBUG/TestFlight tier switcher in Settings). iPad support is still a later phase. See
+`competitive-analysis.md` (feature/positioning rationale), `material.md` (graphics brief),
+and the `monetization-strategy` project memory for product context.
 
 ## Commands
 
@@ -79,8 +83,43 @@ both on screen and during export, so the exported image always matches the previ
 - `SwiftUI.Tab` is a builder type — **do not name local enums `Tab`** (shadows the view).
   `RootView` uses `Section` for this reason.
 
-## Deferred phases (architected for, not yet built)
+## MVP Roadmap
 
-Templates (SwiftData `@Model` wrapping a `FrameStyle`, bulk apply, Templates tab) → iCloud sync
-(CloudKit private DB) → StoreKit 2 monetization (Free / one-time / subscription tiers) → iPad
-(`NavigationSplitView`). `FrameStyle` is `Codable` from day one so templates drop in cleanly.
+The build order to reach a competitive launch (rationale + competitor gaps in
+`competitive-analysis.md`). Tiering follows **functionality → Pro (one-time); cosmetics +
+QoS → Studio (subscription)**. New gated capabilities extend
+`FrameIt/Core/Monetization/PremiumFeature.swift` (new cases `.premiumLogo`,
+`.metadataEditing`, `.unlimitedBatch` + their `requiredTier`), and **every new gated
+`FrameStyle` field must be handled in `FrameStyle+Tier.swift`** (`sanitized(for:)` +
+`requiresTier()`) so the preview == export invariant holds.
+
+### Phase 1 — Parity essentials (pre-launch blockers)
+
+| Feature | Tier | Architecture / reuse |
+|---|---|---|
+| **Camera brand logos** | Pro | New `Core/Frame/LogoCatalog.swift` mirroring `FontCatalog`/`PinCatalog` (`all`, `isPremium`, `defaultID = "none"`; `id, displayName, assetName`). Bundle brand vector PDFs in `Assets.xcassets`. Add `logoID: String` to `FrameStyle` (Codable, default `"none"`). Render in `FramePreview` near `titleText`/device column. New `BrandingControls` panel gating premium logos like `FontPicker` (crown + `.upsell(.premiumLogo)`). Extend `sanitized(for:)`/`requiresTier()`. |
+| **Manual EXIF entry / edit** | Pro | Per-asset `MetadataOverride` (Codable) keyed by `PhotoAsset` localIdentifier, persisted via a small SwiftData store (like `Template`). `EditorViewModel` merges the override onto `MetadataService` output before binding into `FramePreview`. New editor panel to edit each `PhotoMetadata` field; reuse `ExposureFormatting` to parse/format. Gate behind new `PremiumFeature.metadataEditing`. Unlocks film + EXIF-stripped photos. |
+| **Onboarding** | Free | New `Features/Onboarding/` paged first-run intro via `@AppStorage("hasOnboarded")`. Liquid Glass + HIG. |
+
+### Phase 2 — Headline differentiator
+
+| Feature | Tier | Architecture / reuse |
+|---|---|---|
+| **Batch apply + bulk export** | **Free ≤5 / Pro unlimited** | Multi-select mode in `LibraryView`/`LibraryViewModel`. New `BatchExportViewModel`: pick a `SavedTemplate` (reuse `TemplateStore`) → per asset: `PhotoLibraryService.loadFullImageData` → `MetadataService` → `FrameRenderer.render(style: sanitized(for: tier))` → `ExportService.saveToPhotos`. Progress + cancel UI; render off the main run loop where possible. Cap `freeBatchLimit = 5` unless `isUnlocked(.unlimitedBatch)` (new `PremiumFeature`) → over-cap routes to the existing paywall. (Map mode optional in v1.) |
+| **Custom logo / signature image** | Pro | Extend `Signature` (in `FrameStyle.swift`) with `imageID: String?` (Codable) referencing a file in Application Support via a small `SignatureImageStore`. `PhotosPicker` import in `SignatureControls`; render alongside/instead of the credit text in `FramePreview.signatureLine`. Reuse the `.customCredit` (Pro) gate; `sanitized(for:)` drops the image below one-time. |
+
+### Phase 3 — Polish & format coverage (Pro unless noted)
+
+| Feature | Notes |
+|---|---|
+| Aspect-ratio / crop presets (4:5, 16:9, 1:1) | Add `aspectRatio` + optional crop rect to `FrameStyle`; apply in `FramePreview.photoView`. |
+| Basic photo adjustments (brightness/contrast/B&W) | Store params in `FrameStyle`; apply a `CIFilter` chain to the source `UIImage` before `FrameRenderer`. |
+| Export format + quality (PNG/HEIC, hi-res) | Extend `ExportService`; hi-res gated by tier. |
+| HDR / Live Photo preservation (**Free**) | Export-path work in `ExportService`. |
+
+## Later (post-MVP, already architected)
+
+iCloud sync (CloudKit on the SwiftData `Template` store — **Studio/QoS**) → font & frame
+**packs** + premium app icons + styled credit (**Studio/cosmetics**) → localization
+(7 langs) → iPad (`NavigationSplitView`) → Mac Catalyst / visionOS. `FrameStyle` is
+`Codable` from day one so templates + new style fields sync cleanly.
