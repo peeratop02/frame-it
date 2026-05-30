@@ -50,24 +50,35 @@ final class EditorViewModel {
     var shareItem: ShareImage?
     /// Bumped on a successful export to trigger success haptics.
     private(set) var exportSuccessCount = 0
+    /// Set when an action is blocked by entitlements; the view presents the upsell.
+    var pendingUpsell: PremiumFeature?
+    /// True when the last applied template had premium features stripped because the
+    /// current tier doesn't unlock them. The view shows an inline "upgrade" note.
+    var lastApplyWasDowngraded = false
 
     private let library: any PhotoLibraryService
     private let metadataService: any MetadataService
     private let exporter: ExportService
+    private let entitlements: any EntitlementProvider
     private let renderer = FrameRenderer()
     private let mapRenderer = MapSnapshotRenderer()
+
+    /// Free tier may keep at most this many saved templates.
+    static let freeTemplateLimit = 2
 
     init(
         asset: PhotoAsset,
         editingTemplate: SavedTemplate? = nil,
         library: any PhotoLibraryService = PhotoKitLibraryService(),
         metadataService: any MetadataService = ImageIOMetadataService(),
-        exporter: ExportService = ExportService()
+        exporter: ExportService = ExportService(),
+        entitlements: any EntitlementProvider = StoreKitEntitlementService.shared
     ) {
         self.asset = asset
         self.library = library
         self.metadataService = metadataService
         self.exporter = exporter
+        self.entitlements = entitlements
 
         if let editingTemplate {
             // Opened to edit an existing template: start from its style and target it on Save.
@@ -152,7 +163,13 @@ final class EditorViewModel {
     /// counts as an unsaved change so the close prompt still appears. Remembers the source
     /// template so Save can offer to update it instead of creating a duplicate.
     func apply(_ template: SavedTemplate) {
-        style = template.style
+        // A template built with premium features is sanitized down to what the
+        // current tier allows, so the preview (and export) never show a locked look.
+        let needed = template.style.requiresTier()
+        lastApplyWasDowngraded = needed > entitlements.tier
+        style = lastApplyWasDowngraded
+            ? template.style.sanitized(for: entitlements.tier)
+            : template.style
         appliedTemplate = template
         if style.placeStyle == .map { Task { await ensureMapSnapshot() } }
     }
@@ -167,11 +184,20 @@ final class EditorViewModel {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         let finalName = trimmed.isEmpty ? suggestedTemplateName : trimmed
         guard let store = templateStore else { return }
+        let existing = savedTemplates.first {
+            $0.name.caseInsensitiveCompare(finalName) == .orderedSame
+        }
+        // Free tier is capped: creating a *new* template beyond the limit is gated.
+        // Updating an existing template (same name) is always allowed.
+        if existing == nil,
+           !entitlements.isUnlocked(.unlimitedTemplates),
+           savedTemplates.count >= Self.freeTemplateLimit {
+            pendingUpsell = .unlimitedTemplates
+            return
+        }
         let thumbnail = templateThumbnail()
         do {
-            if let existing = savedTemplates.first(where: {
-                $0.name.caseInsensitiveCompare(finalName) == .orderedSame
-            }) {
+            if let existing {
                 try store.update(id: existing.id, name: finalName, style: style, thumbnail: thumbnail)
                 appliedTemplate = existing
                 loadTemplates()
@@ -210,10 +236,15 @@ final class EditorViewModel {
         }
     }
 
+    /// The style actually rendered/exported: forced down to what the current tier
+    /// allows. A no-op for a normally-gated session (the UI already prevents picking
+    /// locked options) — a safety net so a lapsed entitlement can't leak a paid look.
+    private var exportStyle: FrameStyle { style.sanitized(for: entitlements.tier) }
+
     /// A downscaled (~300pt) framed preview for the template grid.
     private func templateThumbnail() -> UIImage? {
         guard let source = sourceImage,
-              let full = renderer.render(photo: source, style: style, metadata: metadata,
+              let full = renderer.render(photo: source, style: exportStyle, metadata: metadata,
                                          mapSnapshot: mapSnapshot) else { return nil }
         let maxSide: CGFloat = 300
         let scale = min(maxSide / max(full.size.width, full.size.height), 1)
@@ -227,7 +258,7 @@ final class EditorViewModel {
 
     private func renderCurrent() -> UIImage? {
         guard let source = sourceImage else { return nil }
-        guard let image = renderer.render(photo: source, style: style, metadata: metadata,
+        guard let image = renderer.render(photo: source, style: exportStyle, metadata: metadata,
                                           mapSnapshot: mapSnapshot) else {
             alert = EditorAlert(title: "Render Failed",
                                 message: "Something went wrong creating the framed image.")

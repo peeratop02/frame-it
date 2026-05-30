@@ -119,4 +119,69 @@ struct EditorViewModelTests {
         vm.saveAsTemplate(named: "   ")
         #expect(store.saved.first?.name == "Template 1")
     }
+
+    // MARK: - Entitlement gating
+
+    private func premiumFontID() -> String { FontCatalog.all.first { $0.isPremium }!.id }
+
+    @Test func freeTierBlocksThirdTemplateSave() {
+        let vm = EditorViewModel(asset: .sample(),
+                                 entitlements: MockEntitlementProvider(tier: .free))
+        let store = MockTemplateStore()
+        vm.attach(store: store)
+
+        vm.saveAsTemplate(named: "One")
+        vm.saveAsTemplate(named: "Two")
+        #expect(store.saved.count == 2)
+
+        vm.saveAsTemplate(named: "Three")   // exceeds the free cap
+        #expect(store.saved.count == 2)
+        #expect(vm.pendingUpsell == .unlimitedTemplates)
+    }
+
+    @Test func freeTierStillUpdatesExistingTemplateAtCap() {
+        let vm = EditorViewModel(asset: .sample(),
+                                 entitlements: MockEntitlementProvider(tier: .free))
+        let store = MockTemplateStore()
+        vm.attach(store: store)
+        vm.saveAsTemplate(named: "One")
+        vm.saveAsTemplate(named: "Two")
+
+        // Re-saving an existing name updates rather than inserting — never gated.
+        vm.style.shadowStrength = 0.5
+        vm.saveAsTemplate(named: "Two")
+        #expect(store.saved.count == 2)
+        #expect(vm.pendingUpsell == nil)
+    }
+
+    @Test func paidTierAllowsUnlimitedTemplates() {
+        let vm = EditorViewModel(asset: .sample(),
+                                 entitlements: MockEntitlementProvider(tier: .oneTime))
+        let store = MockTemplateStore()
+        vm.attach(store: store)
+        vm.saveAsTemplate(named: "One")
+        vm.saveAsTemplate(named: "Two")
+        vm.saveAsTemplate(named: "Three")
+        #expect(store.saved.count == 3)
+        #expect(vm.pendingUpsell == nil)
+    }
+
+    @Test func applyingPremiumTemplateWhileFreeDowngrades() {
+        let vm = EditorViewModel(asset: .sample(),
+                                 entitlements: MockEntitlementProvider(tier: .free))
+        let template = makeTemplate { $0.fontID = self.premiumFontID() }
+        vm.apply(template)
+        #expect(vm.lastApplyWasDowngraded)
+        #expect(vm.style.fontID == FontCatalog.defaultID)
+    }
+
+    @Test func applyingPremiumTemplateWhilePaidKeepsIt() {
+        let vm = EditorViewModel(asset: .sample(),
+                                 entitlements: MockEntitlementProvider(tier: .oneTime))
+        let premium = premiumFontID()
+        let template = makeTemplate { $0.fontID = premium }
+        vm.apply(template)
+        #expect(vm.lastApplyWasDowngraded == false)
+        #expect(vm.style.fontID == premium)
+    }
 }

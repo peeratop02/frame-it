@@ -71,6 +71,9 @@ schemes:
         FrameItTests: [test]
     run:
       config: Debug
+      # Local StoreKit configuration so the paywall/purchase/restore flow runs in the
+      # simulator with no App Store Connect setup.
+      storeKitConfiguration: FrameIt/Resources/Store/Products.storekit
     test:
       config: Debug
       targets:

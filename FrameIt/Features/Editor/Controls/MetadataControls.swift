@@ -7,6 +7,8 @@ import SwiftUI
 struct MetadataControls: View {
     @Binding var style: FrameStyle
     let metadata: PhotoMetadata
+    @Environment(\.entitlements) private var entitlements
+    @State private var upsellFeature: PremiumFeature?
 
     private let columns = [GridItem(.flexible(), spacing: 8),
                            GridItem(.flexible(), spacing: 8)]
@@ -31,6 +33,7 @@ struct MetadataControls: View {
                 }
             }
         }
+        .upsell($upsellFeature)
     }
 
     @ViewBuilder
@@ -58,7 +61,11 @@ struct MetadataControls: View {
     private func pinButton(_ pin: PinIcon) -> some View {
         let isOn = style.pinIcon == pin.id
         return Button {
-            style.pinIcon = pin.id
+            if pin.isPremium && !entitlements.isUnlocked(.premiumPin) {
+                upsellFeature = .premiumPin
+            } else {
+                style.pinIcon = pin.id
+            }
         } label: {
             Image(systemName: pin.systemName)
                 .font(.title3)

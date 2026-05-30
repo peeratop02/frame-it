@@ -1,0 +1,142 @@
+{
+  "identifier" : "3D6846B3-B7DB-4481-A2C9-4085C2BAFF7E",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "B0633D70-C007-424E-A0F2-7BFB667D1855",
+      "localizations" : [
+        {
+          "description" : "Unlock every premium font and map pin, customize or hide the credit, and save unlimited templates — one payment, yours forever.",
+          "displayName" : "Frame It Pro",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.peeratop02.frameit.pro",
+      "referenceName" : "Frame It Pro",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0",
+    "_developerTeamID" : "0",
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "2951D2D1-D38A-4809-A93E-C441992CBEA7",
+      "localizations" : [
+
+      ],
+      "name" : "Studio",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "44798B70-75A9-4A40-851E-A78BD92FD65E",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Everything in Pro, plus styled credit, future font packs, and iCloud sync. Billed monthly.",
+              "displayName" : "Frame It Studio (Monthly)",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.peeratop02.frameit.studio.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Frame It Studio Monthly",
+          "subscriptionGroupID" : "2951D2D1-D38A-4809-A93E-C441992CBEA7",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "39.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "0C62C4B4-3EFE-4496-83FC-C300E526BD62",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Everything in Pro, plus styled credit, future font packs, and iCloud sync. Billed yearly — best value.",
+              "displayName" : "Frame It Studio (Yearly)",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.peeratop02.frameit.studio.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Frame It Studio Yearly",
+          "subscriptionGroupID" : "2951D2D1-D38A-4809-A93E-C441992CBEA7",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

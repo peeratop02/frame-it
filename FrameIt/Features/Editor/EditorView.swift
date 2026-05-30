@@ -27,6 +27,7 @@ struct EditorView: View {
     @State private var showDiscardConfirm = false
     @State private var showSaveTemplate = false
     @State private var templateName = ""
+    @State private var showPaywall = false
 
     init(asset: PhotoAsset, editingTemplate: SavedTemplate? = nil) {
         _viewModel = State(initialValue: EditorViewModel(asset: asset, editingTemplate: editingTemplate))
@@ -41,6 +42,7 @@ struct EditorView: View {
             VStack(spacing: 12) {
                 header
                 previewArea
+                if viewModel.lastApplyWasDowngraded { downgradeNote }
                 controlDock(viewModel: viewModel)
             }
         }
@@ -74,6 +76,36 @@ struct EditorView: View {
         } message: {
             Text("Reuse this frame's style on other photos.")
         }
+        // A gated action (e.g. saving past the free template cap) routes here.
+        .upsell($viewModel.pendingUpsell)
+        .fullScreenCover(isPresented: $showPaywall) {
+            PaywallView()
+        }
+    }
+
+    /// Inline banner shown when an applied template had premium features stripped.
+    private var downgradeNote: some View {
+        Button {
+            showPaywall = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "crown.fill")
+                    .foregroundStyle(Theme.premiumGold)
+                Text("Premium features were removed. Upgrade to use them.")
+                    .font(.caption)
+                    .foregroundStyle(.primary)
+                Spacer(minLength: 0)
+                Text("Upgrade")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Theme.premiumGold.opacity(0.12), in: .rect(cornerRadius: 12))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 12)
     }
 
     private func attemptClose() {

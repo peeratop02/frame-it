@@ -6,9 +6,15 @@ import SwiftUI
 struct SettingsView: View {
     @AppStorage(AppearanceMode.storageKey) private var appearanceRaw = AppearanceMode.system.rawValue
     @AppStorage(FontCatalog.defaultSelectionKey) private var defaultFontID = FontCatalog.defaultID
+    @Environment(\.entitlements) private var entitlements
     @State private var showFontPicker = false
+    @State private var showPaywall = false
+    @State private var showComparison = false
+    @State private var isRestoring = false
+    @State private var restoreMessage: String?
 
     private var defaultFont: FrameFont { FontCatalog.font(id: defaultFontID) }
+    private var isPaid: Bool { entitlements.tier > .free }
 
     private var appVersion: String {
         let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
@@ -20,15 +26,29 @@ struct SettingsView: View {
         NavigationStack {
             List {
                 Section {
-                    LabeledContent("Plan", value: "Free")
-                    Button("Upgrade — Unlock Everything") {}
-                        .disabled(true)
-                    Button("Restore Purchases") {}
-                        .disabled(true)
+                    LabeledContent("Plan", value: entitlements.tier.displayName)
+                    if !isPaid {
+                        Button("Upgrade — Unlock Everything") { showPaywall = true }
+                    }
+                    Button("Compare Plans") { showComparison = true }
+                    Button {
+                        Task { await restore() }
+                    } label: {
+                        HStack {
+                            Text("Restore Purchases")
+                            if isRestoring {
+                                Spacer()
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(isRestoring)
                 } header: {
                     Text("Frame It")
                 } footer: {
-                    Text("In-app purchases arrive in a future update.")
+                    Text(isPaid
+                         ? "Thanks for supporting Frame It — \(entitlements.tier.tagline.lowercased())."
+                         : "Unlock every font, pin, custom credit, and unlimited templates.")
                 }
 
                 Section {
@@ -64,6 +84,32 @@ struct SettingsView: View {
             .sheet(isPresented: $showFontPicker) {
                 FontPickerSheet(selection: $defaultFontID)
             }
+            .sheet(isPresented: $showComparison) {
+                PlanComparisonView()
+            }
+            .fullScreenCover(isPresented: $showPaywall) {
+                PaywallView()
+            }
+            .alert("Restore Purchases",
+                   isPresented: Binding(get: { restoreMessage != nil },
+                                        set: { if !$0 { restoreMessage = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(restoreMessage ?? "")
+            }
+        }
+    }
+
+    private func restore() async {
+        isRestoring = true
+        defer { isRestoring = false }
+        do {
+            try await entitlements.restore()
+            restoreMessage = entitlements.tier > .free
+                ? "Your \(entitlements.tier.displayName) plan has been restored."
+                : "No previous purchases were found to restore."
+        } catch {
+            restoreMessage = "Couldn't restore purchases. Please try again."
         }
     }
 
@@ -71,7 +117,12 @@ struct SettingsView: View {
     /// gold crown marking it as a premium capability. Opens the shared font picker.
     private var defaultFontRow: some View {
         Button {
-            showFontPicker = true
+            // Choosing a default font is a premium capability — gate the entry point.
+            if entitlements.isUnlocked(.premiumFont) {
+                showFontPicker = true
+            } else {
+                showPaywall = true
+            }
         } label: {
             HStack(spacing: 8) {
                 Text("Default font")

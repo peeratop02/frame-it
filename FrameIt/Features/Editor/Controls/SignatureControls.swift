@@ -8,43 +8,88 @@ import SwiftUI
 /// monetization. Free: fixed credit. One-time: custom text. Subscription: + styling.
 struct SignatureControls: View {
     @Binding var style: FrameStyle
+    @Environment(\.entitlements) private var entitlements
+    @State private var upsellFeature: PremiumFeature?
 
     /// Max length for the custom credit so it stays a one-line footer.
     private let maxLength = 60
 
+    /// Custom / hidden credit needs one-time; matched styling needs subscription.
+    private var creditLocked: Bool { !entitlements.isUnlocked(.customCredit) }
+    private var styledLocked: Bool { !entitlements.isUnlocked(.styledCredit) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Toggle(isOn: showCreditBinding) {
-                premiumLabel("Show credit")
-            }
+            gatedToggle("Show credit",
+                        isOn: showCreditBinding,
+                        locked: creditLocked,
+                        feature: .customCredit)
 
             VStack(alignment: .leading, spacing: 6) {
-                premiumLabel("Custom text")
+                premiumLabel("Custom text", locked: creditLocked)
                 TextField(FrameStyle.defaultCredit, text: customTextBinding)
                     .textFieldStyle(.roundedBorder)
                     .submitLabel(.done)
+                    .disabled(creditLocked || style.signature.isHidden)
             }
-            .disabled(style.signature.isHidden)
-            .opacity(style.signature.isHidden ? 0.5 : 1)
-
-            Toggle(isOn: $style.signature.matchesFrameStyle) {
-                premiumLabel("Match frame style")
+            .opacity((creditLocked || style.signature.isHidden) ? 0.5 : 1)
+            // A locked tap on the field area routes to the upsell.
+            .overlay {
+                if creditLocked {
+                    Color.clear.contentShape(.rect)
+                        .onTapGesture { upsellFeature = .customCredit }
+                }
             }
-            .disabled(style.signature.isHidden)
 
-            Text("Customizing or removing the credit is a premium feature.")
+            gatedToggle("Match frame style",
+                        isOn: $style.signature.matchesFrameStyle,
+                        locked: styledLocked || style.signature.isHidden,
+                        feature: .styledCredit)
+
+            Text(creditLocked
+                 ? "Customizing or removing the credit is a premium feature."
+                 : "Match the credit to your frame's font and color with Studio.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
+        }
+        .upsell($upsellFeature)
+    }
+
+    /// A toggle that, when locked, shows the crown and routes taps to the upsell
+    /// instead of flipping. When unlocked it behaves as a normal toggle.
+    @ViewBuilder
+    private func gatedToggle(_ title: String,
+                             isOn: Binding<Bool>,
+                             locked: Bool,
+                             feature: PremiumFeature) -> some View {
+        if locked {
+            Button {
+                upsellFeature = feature
+            } label: {
+                HStack {
+                    premiumLabel(title, locked: true)
+                    Spacer()
+                    Image(systemName: "lock.fill")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+        } else {
+            Toggle(isOn: isOn) { premiumLabel(title, locked: false) }
         }
     }
 
     /// A control label with a trailing gold crown marking a premium capability.
-    private func premiumLabel(_ title: String) -> some View {
+    private func premiumLabel(_ title: String, locked: Bool) -> some View {
         HStack(spacing: 6) {
             Text(title)
-            Image(systemName: "crown.fill")
-                .font(.caption2)
-                .foregroundStyle(Theme.premiumGold)
+            if locked {
+                Image(systemName: "crown.fill")
+                    .font(.caption2)
+                    .foregroundStyle(Theme.premiumGold)
+            }
         }
         .font(.subheadline)
     }

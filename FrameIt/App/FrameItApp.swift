@@ -11,6 +11,8 @@ struct FrameItApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                // Single shared entitlement source for all gating + paywall surfaces.
+                .environment(\.entitlements, StoreKitEntitlementService.shared)
         }
         // On-device store for saved templates. CloudKit sync is added in a later
         // phase (the model is already designed CloudKit-compatible).

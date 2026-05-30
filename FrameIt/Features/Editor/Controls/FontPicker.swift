@@ -11,6 +11,8 @@ import SwiftUI
 struct FontPickerSheet: View {
     @Binding var selection: String
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.entitlements) private var entitlements
+    @State private var upsellFeature: PremiumFeature?
 
     var body: some View {
         NavigationStack {
@@ -32,12 +34,20 @@ struct FontPickerSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+        .upsell($upsellFeature)
     }
+
+    /// Premium fonts route a locked user to the upsell instead of selecting.
+    private var isFontLocked: Bool { !entitlements.isUnlocked(.premiumFont) }
 
     private func row(_ font: FrameFont) -> some View {
         Button {
-            selection = font.id
-            dismiss()
+            if font.isPremium && isFontLocked {
+                upsellFeature = .premiumFont
+            } else {
+                selection = font.id
+                dismiss()
+            }
         } label: {
             HStack(spacing: 10) {
                 Text(font.displayName)
