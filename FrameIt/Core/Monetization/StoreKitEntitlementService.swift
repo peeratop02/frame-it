@@ -10,17 +10,45 @@ import os
 final class StoreKitEntitlementService: EntitlementProvider {
     static let shared = StoreKitEntitlementService()
 
-    private(set) var tier: AppTier = .free
+    /// The tier computed from real StoreKit entitlements.
+    private(set) var resolvedTier: AppTier = .free
     private(set) var products: [Product] = []
     private(set) var isReady = false
 
+    /// Tester-only override (DEBUG / TestFlight). Persisted so it survives relaunch.
+    /// Ignored entirely in App Store production via `AppEnvironment.isTestBuild`.
+    var tierOverride: AppTier? {
+        didSet { persistOverride() }
+    }
+
+    /// The effective tier all gating reads: the tester override when active, else the
+    /// real entitlement.
+    var tier: AppTier {
+        (AppEnvironment.isTestBuild ? tierOverride : nil) ?? resolvedTier
+    }
+
+    private static let overrideKey = "debugTierOverride"
     private var updatesTask: Task<Void, Never>?
     private let logger = Logger(subsystem: "com.peeratop02.frameit", category: "StoreKit")
 
     private init() {
+        // Restore a previously chosen test override (test builds only).
+        if AppEnvironment.isTestBuild,
+           let raw = UserDefaults.standard.object(forKey: Self.overrideKey) as? Int {
+            tierOverride = AppTier(rawValue: raw)
+        }
         // Begin listening before any purchase so we never miss a transaction.
         updatesTask = listenForTransactions()
         Task { await refresh() }
+    }
+
+    private func persistOverride() {
+        let defaults = UserDefaults.standard
+        if let tierOverride {
+            defaults.set(tierOverride.rawValue, forKey: Self.overrideKey)
+        } else {
+            defaults.removeObject(forKey: Self.overrideKey)
+        }
     }
 
     /// Load products and recompute the current tier. Safe to call repeatedly.
@@ -53,7 +81,7 @@ final class StoreKitEntitlementService: EntitlementProvider {
             if let exp = transaction.expirationDate, exp < .now { continue }
             resolved = max(resolved, StoreProductID.tier(for: transaction.productID))
         }
-        tier = resolved
+        resolvedTier = resolved
     }
 
     func purchase(_ product: Product) async throws {

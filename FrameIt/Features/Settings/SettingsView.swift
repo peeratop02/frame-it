@@ -73,6 +73,21 @@ struct SettingsView: View {
                     Text("Sync your templates and settings across devices. Coming soon.")
                 }
 
+                if AppEnvironment.isTestBuild {
+                    Section {
+                        Picker("Simulated Plan", selection: tierOverrideBinding) {
+                            Text("Real purchases").tag(AppTier?.none)
+                            ForEach(AppTier.allCases, id: \.self) { tier in
+                                Text(tier.displayName).tag(AppTier?.some(tier))
+                            }
+                        }
+                    } header: {
+                        Text("Testing")
+                    } footer: {
+                        Text("Preview each plan's gating without purchasing. Not shown on the App Store.")
+                    }
+                }
+
                 Section("About") {
                     LabeledContent("Version", value: appVersion)
                     Link("Privacy Policy", destination: URL(string: "https://example.com/privacy")!)
@@ -98,6 +113,12 @@ struct SettingsView: View {
                 Text(restoreMessage ?? "")
             }
         }
+    }
+
+    /// Two-way binding to the tester tier override (test builds only).
+    private var tierOverrideBinding: Binding<AppTier?> {
+        Binding(get: { entitlements.tierOverride },
+                set: { entitlements.tierOverride = $0 })
     }
 
     private func restore() async {

@@ -12,15 +12,12 @@ struct UpsellSheet: View {
         VStack(spacing: 0) {
             Spacer(minLength: 12)
 
-            ZStack {
-                Circle()
-                    .fill(Theme.premiumGold.opacity(0.15))
-                    .frame(width: 96, height: 96)
-                Image(systemName: feature.symbolName)
-                    .font(.system(size: 40, weight: .semibold))
-                    .foregroundStyle(Theme.premiumGold)
-            }
-            .padding(.bottom, 20)
+            Image(systemName: feature.symbolName)
+                .font(.system(size: 40, weight: .semibold))
+                .foregroundStyle(Theme.premiumGold)
+                .frame(width: 96, height: 96)
+                .glassEffect(.regular.tint(Theme.premiumGold.opacity(0.18)), in: .circle)
+                .padding(.bottom, 20)
 
             Text(feature.title)
                 .font(.title2.bold())
@@ -45,10 +42,11 @@ struct UpsellSheet: View {
                     Text("See Plans")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Theme.accent, in: .rect(cornerRadius: 16))
-                        .foregroundStyle(.white)
+                        .padding(.vertical, 6)
                 }
+                .buttonStyle(.glassProminent)
+                .controlSize(.large)
+                .tint(Theme.accent)
 
                 Button("Not Now") { dismiss() }
                     .font(.subheadline)

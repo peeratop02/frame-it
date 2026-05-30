@@ -33,4 +33,29 @@ struct EntitlementGatingTests {
         try await provider.restore()
         #expect(provider.restoreCallCount == 1)
     }
+
+    // MARK: - Tester tier override
+
+    @Test func overrideRaisesEffectiveTierAndUnlocksEverything() {
+        let provider = MockEntitlementProvider(tier: .free)
+        provider.tierOverride = .subscription
+        #expect(provider.tier == .subscription)
+        for feature in PremiumFeature.allCases {
+            #expect(provider.isUnlocked(feature))
+        }
+    }
+
+    @Test func overrideCanSimulateFreeWhilePaid() {
+        let provider = MockEntitlementProvider(tier: .subscription)
+        provider.tierOverride = .free
+        #expect(provider.tier == .free)
+        #expect(provider.isUnlocked(.premiumFont) == false)
+    }
+
+    @Test func clearingOverrideFallsBackToRealTier() {
+        let provider = MockEntitlementProvider(tier: .oneTime)
+        provider.tierOverride = .free
+        provider.tierOverride = nil
+        #expect(provider.tier == .oneTime)
+    }
 }

@@ -5,6 +5,8 @@ import SwiftUI
 /// so the marketing never drifts from the actual entitlements.
 struct PlanComparisonView: View {
     @Environment(\.dismiss) private var dismiss
+    /// Tier column width scales with Dynamic Type so checkmarks/labels don't clip.
+    @ScaledMetric(relativeTo: .subheadline) private var columnWidth: CGFloat = 60
 
     /// One comparison row: a capability and the lowest tier that includes it.
     private struct Capability: Identifiable {
@@ -61,7 +63,7 @@ struct PlanComparisonView: View {
                 Text(tier.displayName)
                     .font(.caption.weight(.bold))
                     .foregroundStyle(tier == .free ? .secondary : Theme.premiumGold)
-                    .frame(width: 60)
+                    .frame(width: columnWidth)
             }
         }
         .padding(.vertical, 10)
@@ -78,7 +80,7 @@ struct PlanComparisonView: View {
                     .foregroundStyle(tier.unlocks(cap.minTier)
                                      ? (tier == .free ? Color.secondary : Theme.accent)
                                      : Color(.tertiaryLabel))
-                    .frame(width: 60)
+                    .frame(width: columnWidth)
                     .accessibilityLabel(tier.unlocks(cap.minTier) ? "Included" : "Not included")
             }
         }

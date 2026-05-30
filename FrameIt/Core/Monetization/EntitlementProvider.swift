@@ -11,6 +11,10 @@ protocol EntitlementProvider: AnyObject {
     var products: [Product] { get }
     /// Whether the load of products/entitlements has completed at least once.
     var isReady: Bool { get }
+    /// Tester-only simulated tier. When non-nil in a test build it overrides the real
+    /// entitlement so each plan can be experienced without purchasing. Ignored in
+    /// App Store production builds. `nil` ⇒ use real purchases.
+    var tierOverride: AppTier? { get set }
 
     /// Buy a product and refresh entitlements. Throws on failure (not on user cancel).
     func purchase(_ product: Product) async throws
@@ -39,16 +43,18 @@ extension EntitlementProvider {
 /// no-ops that simply raise the tier so flows can be exercised without StoreKit.
 @MainActor
 final class PreviewEntitlements: EntitlementProvider {
-    private(set) var tier: AppTier
+    private var baseTier: AppTier
+    var tierOverride: AppTier?
+    var tier: AppTier { tierOverride ?? baseTier }
     private(set) var products: [Product] = []
     let isReady = true
 
     init(tier: AppTier = .free) {
-        self.tier = tier
+        self.baseTier = tier
     }
 
     func purchase(_ product: Product) async throws {
-        tier = max(tier, StoreProductID.tier(for: product.id))
+        baseTier = max(baseTier, StoreProductID.tier(for: product.id))
     }
 
     func restore() async throws {}

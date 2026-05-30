@@ -84,14 +84,11 @@ struct PaywallView: View {
 
     private var hero: some View {
         VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Theme.premiumGold.opacity(0.15))
-                    .frame(width: 104, height: 104)
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 46, weight: .semibold))
-                    .foregroundStyle(Theme.premiumGold)
-            }
+            Image(systemName: "crown.fill")
+                .font(.system(size: 46, weight: .semibold))
+                .foregroundStyle(Theme.premiumGold)
+                .frame(width: 104, height: 104)
+                .glassEffect(.regular.tint(Theme.premiumGold.opacity(0.18)), in: .circle)
             Text("Unlock the Full Frame It")
                 .font(.title.bold())
                 .multilineTextAlignment(.center)
@@ -238,6 +235,8 @@ private struct PlanCard: View {
                     .offset(x: -12, y: -10)
             }
         }
+        // One coherent VoiceOver element: name, price, tagline, and button state.
+        .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
@@ -250,16 +249,16 @@ private struct PlanCard: View {
                 if model.isPurchasing(product) {
                     ProgressView().tint(.white)
                 } else {
-                    Text(owned ? "Current Plan" : "Get \(product.displayName)")
+                    Text(owned ? "Current Plan" : "Get")
                         .font(.headline)
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(owned ? Color.gray.opacity(0.4) : Theme.accent,
-                        in: .rect(cornerRadius: 13))
-            .foregroundStyle(.white)
+            .padding(.vertical, 6)
         }
+        .buttonStyle(.glassProminent)
+        .controlSize(.large)
+        .tint(owned ? .gray : Theme.accent)
         .disabled(owned || model.isPurchasing(product))
     }
 }

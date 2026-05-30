@@ -22,7 +22,10 @@ use and I'll wire them into the views. Until then the SF-Symbol fallbacks stay.
   - Accent: the app `AccentColor` (asset catalog) — used for primary buttons/checks.
   - **Premium gold:** `#D9A621` (RGB 0.85, 0.65, 0.13) — `Theme.premiumGold`. This is
     the "pay to unlock" signal (crowns, badges, Studio highlights). Keep gold *sparing*
-    — accents only, never large fills.
+    — accents only, never large fills. **Contrast caveat:** `#D9A621` is ~2.6:1 on white,
+    so it's safe for icons, badges, and large/bold glyphs but **fails WCAG for body text**
+    — never set gold on small text. Add a **lighter gold** (e.g. `#E8C24A`) as a
+    dark-mode variant so badges stay legible on dark backgrounds.
   - Neutrals: system backgrounds (auto light/dark). **Every asset needs to read on
     both light and dark** — prefer transparent PNG/PDF, avoid baked-in white panels.
 - **Type:** system San Francisco (already in-app). Marketing art should not bake in
@@ -87,6 +90,25 @@ For listing & socials once we publish. Not wired into code — purely for the st
   swap font/pin → export. I can script the exact beats if useful.
 
 ---
+
+## Low-cost wins (do these before commissioning art)
+
+- **SF Symbols, richer rendering:** before custom glyphs, try
+  `.symbolRenderingMode(.hierarchical)` or `.palette` (accent + gold) on the existing
+  benefit/feature symbols. Closes most of the Priority-2 gap for free and stays on-brand.
+- **Don't bake prices into art:** prices are localized at runtime via StoreKit
+  (`product.displayPrice`). Marketing art and screenshots should leave price as live text.
+- **Test every asset in light + dark + tinted** appearance (Liquid Glass reacts to its
+  backdrop) and at large Dynamic Type.
+
+## App Store / ASO (text, not graphics)
+
+- **Keyword targets** for this niche: *EXIF, photo frame, camera metadata, shutter, ISO,
+  film border, watermark, shot on*. Direct competitors: **EXIFrame** ($9.99 lifetime /
+  $0.99 mo), **Cameramark** (free), **Reframe**, **FramePic**.
+- **Differentiation line** to lead the listing: iOS 26 Liquid Glass design, a large
+  curated font library, and one-time ownership of the full tool (subscription is optional,
+  only for sync + ongoing content). Most rivals look utilitarian — lean on craft + polish.
 
 ## What I do NOT need
 

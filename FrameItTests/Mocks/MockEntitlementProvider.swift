@@ -6,17 +6,20 @@ import StoreKit
 /// product list stays empty (gating logic never needs concrete `Product`s).
 @MainActor
 final class MockEntitlementProvider: EntitlementProvider {
-    var tier: AppTier
+    /// The real (purchased) tier; `tier` applies any override on top.
+    var baseTier: AppTier
+    var tierOverride: AppTier?
+    var tier: AppTier { tierOverride ?? baseTier }
     var products: [Product] = []
     var isReady = true
     private(set) var restoreCallCount = 0
 
     init(tier: AppTier = .free) {
-        self.tier = tier
+        self.baseTier = tier
     }
 
     func purchase(_ product: Product) async throws {
-        tier = max(tier, StoreProductID.tier(for: product.id))
+        baseTier = max(baseTier, StoreProductID.tier(for: product.id))
     }
 
     func restore() async throws {
